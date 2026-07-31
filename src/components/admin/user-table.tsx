@@ -1,0 +1,96 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { updateUserRole } from '@/actions/users';
+
+const ROLE_LABELS: Record<string, string> = { admin: 'Yönetici', user: 'Kullanıcı' };
+
+export type AdminUserRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+};
+
+export function UserTable({
+  users,
+  currentUserId,
+}: {
+  users: AdminUserRow[];
+  currentUserId: string;
+}) {
+  const router = useRouter();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+
+  async function handleRoleChange(userId: string, role: string | null) {
+    if (!role || (role !== 'admin' && role !== 'user')) return;
+    setPendingId(userId);
+    const result = await updateUserRole(userId, role);
+    setPendingId(null);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('Rol güncellendi.');
+    router.refresh();
+  }
+
+  return (
+    <div className="max-h-[520px] overflow-auto rounded-lg border border-border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Ad Soyad</TableHead>
+            <TableHead>E-posta</TableHead>
+            <TableHead>Rol</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.map((u) => {
+            const isSelf = u.id === currentUserId;
+            return (
+              <TableRow key={u.id}>
+                <TableCell>
+                  {u.name} {isSelf && <span className="text-muted-foreground">(siz)</span>}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                <TableCell>
+                  <Select
+                    value={u.role}
+                    onValueChange={(v) => handleRoleChange(u.id, v)}
+                    disabled={isSelf || pendingId === u.id}
+                  >
+                    <SelectTrigger className="w-40">
+                      <SelectValue>{(v: string) => ROLE_LABELS[v] ?? v}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">Kullanıcı</SelectItem>
+                      <SelectItem value="admin">Yönetici</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
