@@ -8,19 +8,20 @@ import { requireAdmin, requireSession } from '@/lib/session';
 import { trainingSchema } from '@/schemas/training';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+export type CreateResult = { ok: true; id: string } | { ok: false; error: string };
 
-export async function createTraining(input: unknown): Promise<ActionResult> {
+export async function createTraining(input: unknown): Promise<CreateResult> {
   await requireSession();
   const parsed = trainingSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
   }
-  await db.insert(training).values(parsed.data);
+  const [inserted] = await db.insert(training).values(parsed.data).returning();
   revalidatePath('/katalog');
   revalidatePath('/');
   revalidatePath('/kayitlar');
   revalidatePath('/rapor');
-  return { ok: true };
+  return { ok: true, id: inserted.id };
 }
 
 export async function updateTraining(id: string, input: unknown): Promise<ActionResult> {

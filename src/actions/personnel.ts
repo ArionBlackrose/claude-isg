@@ -7,20 +7,23 @@ import { personnel, personnelHistory } from '@/db/schema';
 import { requireAdmin, requireSession } from '@/lib/session';
 import { normName, splitName } from '@/lib/excel';
 import { personnelSchema } from '@/schemas/personnel';
-import type { ActionResult } from './training';
+import type { CreateResult } from './training';
 
-export async function createPersonnel(input: unknown): Promise<ActionResult> {
+export async function createPersonnel(input: unknown): Promise<CreateResult> {
   await requireSession();
   const parsed = personnelSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
   }
-  await db.insert(personnel).values({ ...parsed.data, durum: 'Güncel' });
+  const [inserted] = await db
+    .insert(personnel)
+    .values({ ...parsed.data, durum: 'Güncel' })
+    .returning();
   revalidatePath('/personel');
   revalidatePath('/');
   revalidatePath('/kayitlar');
   revalidatePath('/rapor');
-  return { ok: true };
+  return { ok: true, id: inserted.id };
 }
 
 export type PersonnelExcelRawRow = Record<string, string>;

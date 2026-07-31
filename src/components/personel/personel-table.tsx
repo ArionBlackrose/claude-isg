@@ -39,6 +39,12 @@ export type PersonelRow = {
   }[];
 };
 
+const DURUM_FILTER_LABELS: Record<string, string> = {
+  all: 'Tüm durumlar',
+  Güncel: 'Güncel',
+  Çıkış: 'Çıkış',
+};
+
 function fmtDate(d: string | null) {
   if (!d) return '-';
   const [y, m, day] = d.split('-');
@@ -71,7 +77,7 @@ export function PersonelTable({ rows }: { rows: PersonelRow[] }) {
         />
         <Select value={durumFilter} onValueChange={(v) => setDurumFilter(v ?? 'all')}>
           <SelectTrigger className="w-40">
-            <SelectValue />
+            <SelectValue>{(v: string) => DURUM_FILTER_LABELS[v] ?? v}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tüm durumlar</SelectItem>
