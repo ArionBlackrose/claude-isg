@@ -63,6 +63,19 @@ export function KayitForm({
     return list.slice(0, 200);
   }, [personList, personSearch]);
 
+  function handlePersonSearchChange(value: string) {
+    setPersonSearch(value);
+    const q = value.trim().toLocaleUpperCase('tr-TR');
+    const matches = q
+      ? personList.filter((p) =>
+          `${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleUpperCase('tr-TR').includes(q),
+        )
+      : personList;
+    if (matches.length === 1) {
+      setPersonnelId(matches[0].id);
+    }
+  }
+
   async function handleSubmit() {
     if (!personnelId || !trainingId || !tarih) {
       toast.error('Lütfen personel, eğitim ve tarih alanlarını doldurun.');
@@ -87,7 +100,7 @@ export function KayitForm({
           <Label>Personel</Label>
           <Input
             value={personSearch}
-            onChange={(e) => setPersonSearch(e.target.value)}
+            onChange={(e) => handlePersonSearchChange(e.target.value)}
             placeholder="Ad, soyad veya TC ile arayın..."
             className="mb-1.5"
           />
