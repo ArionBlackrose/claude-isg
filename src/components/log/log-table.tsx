@@ -40,6 +40,7 @@ export type LogRecord = {
   tarih: string;
   sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
   not: string | null;
+  driveWebViewLink: string | null;
 };
 
 const DURUM_FILTER_LABELS: Record<string, string> = {

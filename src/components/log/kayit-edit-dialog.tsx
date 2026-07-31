@@ -14,7 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { createRecord, deleteRecord, updateRecord } from '@/actions/records';
+import {
+  createRecord,
+  deleteRecord,
+  updateRecord,
+  uploadRecordCertificate,
+} from '@/actions/records';
 import type { LogRecord } from './log-table';
 
 function todayStr() {
@@ -62,6 +67,20 @@ export function KayitEditDialog({
       return;
     }
     toast.success('Güncellendi.');
+    router.refresh();
+  }
+
+  async function handleCertificateUpload(r: LogRecord, file: File) {
+    setPendingId(r.id);
+    const formData = new FormData();
+    formData.set('file', file);
+    const result = await uploadRecordCertificate(r.id, formData);
+    setPendingId(null);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('Sertifika yüklendi.');
     router.refresh();
   }
 
@@ -173,6 +192,33 @@ export function KayitEditDialog({
                   >
                     Sil
                   </Button>
+                  <div className="col-span-full flex items-center gap-2.5 text-xs">
+                    {r.driveWebViewLink ? (
+                      <a
+                        href={r.driveWebViewLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Sertifikayı Görüntüle
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">Sertifika yüklenmedi</span>
+                    )}
+                    <label className="cursor-pointer text-muted-foreground hover:text-foreground">
+                      {r.driveWebViewLink ? 'Değiştir' : 'Sertifika yükle'}
+                      <input
+                        type="file"
+                        className="hidden"
+                        disabled={pendingId === r.id}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleCertificateUpload(r, file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
               );
             })}

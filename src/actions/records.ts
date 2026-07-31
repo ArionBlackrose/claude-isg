@@ -7,6 +7,7 @@ import { personnel, training, trainingRecord } from '@/db/schema';
 import { requireSession } from '@/lib/session';
 import { normName } from '@/lib/excel';
 import { recordSchema, recordUpdateSchema } from '@/schemas/record';
+import { deleteCertificate, DriveNotConfiguredError, uploadCertificate } from '@/lib/drive';
 import type { ActionResult } from './training';
 
 function revalidateRecordPaths() {
@@ -54,7 +55,59 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
 
 export async function deleteRecord(id: string): Promise<ActionResult> {
   await requireSession();
+  const [existing] = await db.select().from(trainingRecord).where(eq(trainingRecord.id, id));
+  if (existing?.driveFileId) {
+    await deleteCertificate(existing.driveFileId).catch(() => {});
+  }
   await db.delete(trainingRecord).where(eq(trainingRecord.id, id));
+  revalidateRecordPaths();
+  return { ok: true };
+}
+
+const MAX_CERTIFICATE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+export async function uploadRecordCertificate(
+  recordId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireSession();
+  const file = formData.get('file');
+  if (!(file instanceof File)) {
+    return { ok: false, error: 'Dosya bulunamadı.' };
+  }
+  if (file.size > MAX_CERTIFICATE_SIZE) {
+    return { ok: false, error: 'Dosya boyutu 10 MB sınırını aşıyor.' };
+  }
+
+  const [existing] = await db.select().from(trainingRecord).where(eq(trainingRecord.id, recordId));
+  if (!existing) {
+    return { ok: false, error: 'Kayıt bulunamadı.' };
+  }
+
+  try {
+    if (existing.driveFileId) {
+      await deleteCertificate(existing.driveFileId).catch(() => {});
+    }
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { fileId, webViewLink } = await uploadCertificate({
+      fileName: `${recordId}-${file.name}`,
+      mimeType: file.type || 'application/octet-stream',
+      buffer,
+    });
+    await db
+      .update(trainingRecord)
+      .set({ driveFileId: fileId, driveWebViewLink: webViewLink })
+      .where(eq(trainingRecord.id, recordId));
+  } catch (err) {
+    if (err instanceof DriveNotConfiguredError) {
+      return { ok: false, error: err.message };
+    }
+    return {
+      ok: false,
+      error: `Sertifika yüklenemedi: ${err instanceof Error ? err.message : 'bilinmeyen hata'}`,
+    };
+  }
+
   revalidateRecordPaths();
   return { ok: true };
 }
