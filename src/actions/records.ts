@@ -117,7 +117,8 @@ export type RecordExcelRawRow = Record<string, string>;
 export type RecordImportSkip = { row: number; reason: string };
 
 export type RecordImportResult =
-  { ok: true; imported: number; skipped: RecordImportSkip[] } | { ok: false; error: string };
+  | { ok: true; imported: number; egitimCreated: number; skipped: RecordImportSkip[] }
+  | { ok: false; error: string };
 
 const VALID_SONUC = new Set(['Başarılı', 'Başarısız', 'Katılmadı']);
 
@@ -142,8 +143,9 @@ export async function importRecordsFromExcel(
 
   const skipped: RecordImportSkip[] = [];
   const toInsert: (typeof trainingRecord.$inferInsert)[] = [];
+  let egitimCreated = 0;
 
-  rows.forEach((row, index) => {
+  for (const [index, row] of rows.entries()) {
     const rowNo = index + 2; // 1. satır başlık
     const tcNo = (row['TC KİMLİK NO'] ?? '').trim();
     const adSoyad = (row['AD SOYAD'] ?? '').trim();
@@ -154,19 +156,26 @@ export async function importRecordsFromExcel(
 
     if (!egitimAdi || !tarih) {
       skipped.push({ row: rowNo, reason: 'Eğitim adı veya tarih eksik.' });
-      return;
+      continue;
     }
 
     const person = (tcNo && personnelByTc.get(tcNo)) || personnelByName.get(normName(adSoyad));
     if (!person) {
       skipped.push({ row: rowNo, reason: `Personel bulunamadı (${tcNo || adSoyad || '?'}).` });
-      return;
+      continue;
     }
 
-    const trainingMatch = trainingByName.get(normName(egitimAdi));
+    // Personel TC/ad-soyad ile bulunduysa ve eğitim kataloğunda yoksa,
+    // eğitimi otomatik oluşturup kaydı bu personele ekliyoruz.
+    let trainingMatch = trainingByName.get(normName(egitimAdi));
     if (!trainingMatch) {
-      skipped.push({ row: rowNo, reason: `Eğitim türü bulunamadı (${egitimAdi}).` });
-      return;
+      const [insertedTraining] = await db
+        .insert(training)
+        .values({ ad: egitimAdi, kategori: 'Genel', gecerlilikAy: 0 })
+        .returning();
+      trainingMatch = insertedTraining;
+      trainingByName.set(normName(egitimAdi), insertedTraining);
+      egitimCreated++;
     }
 
     const sonuc = VALID_SONUC.has(sonucRaw)
@@ -181,7 +190,7 @@ export async function importRecordsFromExcel(
       not: not || null,
       createdByUserId: session.user.id,
     });
-  });
+  }
 
   if (toInsert.length) {
     for (const record of toInsert) {
@@ -190,5 +199,5 @@ export async function importRecordsFromExcel(
   }
 
   revalidateRecordPaths();
-  return { ok: true, imported: toInsert.length, skipped };
+  return { ok: true, imported: toInsert.length, egitimCreated, skipped };
 }

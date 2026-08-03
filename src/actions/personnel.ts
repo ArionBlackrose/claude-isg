@@ -7,7 +7,20 @@ import { personnel, personnelHistory } from '@/db/schema';
 import { requireAdmin, requireSession } from '@/lib/session';
 import { normName, splitName } from '@/lib/excel';
 import { personnelSchema } from '@/schemas/personnel';
-import type { CreateResult } from './training';
+import type { ActionResult, CreateResult } from './training';
+
+function revalidatePersonnelPaths() {
+  revalidatePath('/personel');
+  revalidatePath('/');
+  revalidatePath('/kayitlar');
+  revalidatePath('/rapor');
+}
+
+async function findTcConflict(tcNo: string | undefined, excludeId?: string) {
+  if (!tcNo) return null;
+  const matches = await db.select().from(personnel).where(eq(personnel.tcNo, tcNo));
+  return matches.find((p) => p.id !== excludeId) ?? null;
+}
 
 export async function createPersonnel(input: unknown): Promise<CreateResult> {
   await requireSession();
@@ -15,15 +28,56 @@ export async function createPersonnel(input: unknown): Promise<CreateResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
   }
+  const conflict = await findTcConflict(parsed.data.tcNo);
+  if (conflict) {
+    return {
+      ok: false,
+      error: `Bu TC Kimlik No zaten "${conflict.ad} ${conflict.soyad}" adlı personelde kayıtlı.`,
+    };
+  }
   const [inserted] = await db
     .insert(personnel)
     .values({ ...parsed.data, durum: 'Güncel' })
     .returning();
-  revalidatePath('/personel');
-  revalidatePath('/');
-  revalidatePath('/kayitlar');
-  revalidatePath('/rapor');
+  revalidatePersonnelPaths();
   return { ok: true, id: inserted.id };
+}
+
+export async function updatePersonnel(id: string, input: unknown): Promise<ActionResult> {
+  await requireSession();
+  const parsed = personnelSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
+  }
+  const conflict = await findTcConflict(parsed.data.tcNo, id);
+  if (conflict) {
+    return {
+      ok: false,
+      error: `Bu TC Kimlik No zaten "${conflict.ad} ${conflict.soyad}" adlı personelde kayıtlı.`,
+    };
+  }
+  await db
+    .update(personnel)
+    .set({
+      tcNo: parsed.data.tcNo || null,
+      ad: parsed.data.ad,
+      soyad: parsed.data.soyad,
+      gorev: parsed.data.gorev || null,
+      firma: parsed.data.firma || null,
+      calismaSekli: parsed.data.calismaSekli || null,
+      dogumTarihi: parsed.data.dogumTarihi || null,
+      iseGirisTarihi: parsed.data.iseGirisTarihi || null,
+    })
+    .where(eq(personnel.id, id));
+  revalidatePersonnelPaths();
+  return { ok: true };
+}
+
+export async function deletePersonnel(id: string): Promise<ActionResult> {
+  await requireAdmin();
+  await db.delete(personnel).where(eq(personnel.id, id));
+  revalidatePersonnelPaths();
+  return { ok: true };
 }
 
 export type PersonnelExcelRawRow = Record<string, string>;
@@ -41,6 +95,8 @@ export type PersonnelSyncResult =
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
+
+const toUpperTr = (v: string) => v.toLocaleUpperCase('tr-TR');
 
 export async function syncPersonnelFromExcel(
   rows: PersonnelExcelRawRow[],
@@ -68,9 +124,9 @@ export async function syncPersonnelFromExcel(
   db.transaction((tx) => {
     for (const row of rows) {
       const tcNo = (row['TC KİMLİK NO'] ?? '').trim();
-      const adSoyad = (row['ADI SOYADI'] ?? '').trim();
-      const firma = (row['FİRMA ADI'] ?? '').trim();
-      const gorev = (row['GÖREV'] ?? '').trim();
+      const adSoyad = toUpperTr((row['ADI SOYADI'] ?? '').trim());
+      const firma = toUpperTr((row['FİRMA ADI'] ?? '').trim());
+      const gorev = toUpperTr((row['GÖREV'] ?? '').trim());
       const dogumTarihi = (row['DOĞUM TARİHİ'] ?? '').trim();
       const iseGirisTarihi = (row['İŞE GİRİŞ TARİHİ'] ?? '').trim();
 
@@ -150,10 +206,7 @@ export async function syncPersonnelFromExcel(
     }
   });
 
-  revalidatePath('/personel');
-  revalidatePath('/');
-  revalidatePath('/kayitlar');
-  revalidatePath('/rapor');
+  revalidatePersonnelPaths();
 
   return { ok: true, created, updated, markedExit, skipped };
 }

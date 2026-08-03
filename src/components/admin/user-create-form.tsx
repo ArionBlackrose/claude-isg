@@ -18,6 +18,7 @@ import { createUser } from '@/actions/users';
 import { createUserSchema, type CreateUserInput } from '@/schemas/user';
 
 const ROLE_LABELS: Record<string, string> = { admin: 'Yönetici', user: 'Kullanıcı' };
+const DEFAULTS: CreateUserInput = { name: '', email: '', role: 'user' };
 
 export function UserCreateForm() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export function UserCreateForm() {
     formState: { errors, isSubmitting },
   } = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { name: '', email: '', password: '', role: 'user' },
+    defaultValues: DEFAULTS,
   });
 
   async function onSubmit(values: CreateUserInput) {
@@ -39,30 +40,27 @@ export function UserCreateForm() {
       toast.error(result.error);
       return;
     }
-    toast.success(`"${values.name}" kullanıcısı eklendi.`);
-    reset({ name: '', email: '', password: '', role: 'user' });
+    toast.success(
+      `"${values.name}" kullanıcısı eklendi. Giriş kodu, ilk girişte e-postasına gönderilecek.`,
+    );
+    reset(DEFAULTS);
     router.refresh();
   }
 
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-5 lg:items-end"
+      className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4 lg:items-end"
     >
       <div className="space-y-1.5">
         <Label htmlFor="name">Ad Soyad</Label>
-        <Input id="name" {...register('name')} />
+        <Input id="name" maxLength={50} {...register('name')} />
         {errors.name && <p className="text-xs text-danger">{errors.name.message}</p>}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="email">E-posta</Label>
         <Input id="email" type="email" {...register('email')} />
         {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="password">Şifre</Label>
-        <Input id="password" type="password" {...register('password')} />
-        {errors.password && <p className="text-xs text-danger">{errors.password.message}</p>}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="role">Rol</Label>

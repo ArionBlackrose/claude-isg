@@ -22,7 +22,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'İSG Eğitim Takip Sistemi',
+  title: 'İSG-Ç Eğitim Takip Sistemi',
   description: 'Personel, Eğitim Kataloğu ve Kayıt takibi için İSG eğitim yönetim sistemi.',
 };
 

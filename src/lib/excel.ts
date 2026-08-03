@@ -34,7 +34,14 @@ export function cellToText(value: unknown): string {
   return String(value).trim();
 }
 
+export function isExcelFile(file: File): boolean {
+  return /\.(xlsx|xls)$/i.test(file.name);
+}
+
 export async function parseExcelFile(file: File): Promise<Record<string, string>[]> {
+  if (!isExcelFile(file)) {
+    throw new Error('Sadece .xlsx veya .xls uzantılı dosyalar yüklenebilir.');
+  }
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];

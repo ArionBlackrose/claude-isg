@@ -44,7 +44,7 @@ export function ExcelImportKayit() {
         return;
       }
       setSummary(
-        `${res.imported} kayıt eklendi${res.skipped.length ? ` · ${res.skipped.length} satır atlandı` : ''}.`,
+        `${res.imported} kayıt eklendi${res.egitimCreated ? ` · ${res.egitimCreated} yeni eğitim türü oluşturuldu` : ''}${res.skipped.length ? ` · ${res.skipped.length} satır atlandı` : ''}.`,
       );
       setSkipped(res.skipped);
       toast.success('Excel içe aktarma tamamlandı.');
@@ -61,8 +61,10 @@ export function ExcelImportKayit() {
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
         Sütunlar: <b>TC Kimlik No</b> (veya Ad Soyad), <b>Eğitim Adı</b>, <b>Tarih</b>, <b>Sonuç</b>{' '}
-        (Başarılı/Başarısız/Katılmadı, boşsa Başarılı sayılır), <b>Not</b> (opsiyonel). Eşleşmeyen
-        personel/eğitim adları atlanır ve listelenir.
+        (Başarılı/Başarısız/Katılmadı, boşsa Başarılı sayılır), <b>Not</b> (opsiyonel). Personel TC
+        Kimlik No veya Ad Soyad ile eşleştirilir — eşleşmezse satır atlanır. Eğitim
+        Kataloğu&apos;nda olmayan eğitim adları otomatik olarak yeni bir eğitim türü olarak
+        oluşturulur.
       </p>
       <Button type="button" variant="outline" size="sm" onClick={handleTemplateDownload}>
         Şablon İndir (.xlsx)

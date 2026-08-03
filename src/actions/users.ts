@@ -4,10 +4,14 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { user } from '@/db/schema';
-import { auth } from '@/lib/auth';
 import { requireAdmin } from '@/lib/session';
-import { createUserSchema } from '@/schemas/user';
+import { createUserSchema, updateUserSchema } from '@/schemas/user';
 import type { ActionResult } from './training';
+
+async function findEmailConflict(email: string, excludeId?: string) {
+  const matches = await db.select().from(user).where(eq(user.email, email));
+  return matches.find((u) => u.id !== excludeId) ?? null;
+}
 
 export async function createUser(input: unknown): Promise<ActionResult> {
   await requireAdmin();
@@ -16,24 +20,39 @@ export async function createUser(input: unknown): Promise<ActionResult> {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
   }
 
-  try {
-    const result = await auth.api.signUpEmail({
-      body: {
-        email: parsed.data.email,
-        password: parsed.data.password,
-        name: parsed.data.name,
-      },
-    });
-    if (parsed.data.role === 'admin') {
-      await db.update(user).set({ role: 'admin' }).where(eq(user.id, result.user.id));
-    }
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : 'Kullanıcı oluşturulamadı.',
-    };
+  const conflict = await findEmailConflict(parsed.data.email);
+  if (conflict) {
+    return { ok: false, error: 'Bu e-posta adresiyle kayıtlı bir kullanıcı zaten var.' };
   }
 
+  await db.insert(user).values({
+    id: crypto.randomUUID(),
+    name: parsed.data.name,
+    email: parsed.data.email,
+    emailVerified: true,
+    role: parsed.data.role,
+  });
+
+  revalidatePath('/admin/kullanicilar');
+  return { ok: true };
+}
+
+export async function updateUser(userId: string, input: unknown): Promise<ActionResult> {
+  await requireAdmin();
+  const parsed = updateUserSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
+  }
+
+  const conflict = await findEmailConflict(parsed.data.email, userId);
+  if (conflict) {
+    return { ok: false, error: 'Bu e-posta adresiyle kayıtlı başka bir kullanıcı var.' };
+  }
+
+  await db
+    .update(user)
+    .set({ name: parsed.data.name, email: parsed.data.email })
+    .where(eq(user.id, userId));
   revalidatePath('/admin/kullanicilar');
   return { ok: true };
 }

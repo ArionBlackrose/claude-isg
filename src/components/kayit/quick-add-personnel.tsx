@@ -51,23 +51,29 @@ export function QuickAddPersonnel({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div className="space-y-1">
           <Label>TC No</Label>
-          <Input value={tcNo} onChange={(e) => setTcNo(e.target.value)} placeholder="11 haneli" />
+          <Input
+            value={tcNo}
+            onChange={(e) => setTcNo(e.target.value)}
+            placeholder="11 haneli"
+            inputMode="numeric"
+            maxLength={11}
+          />
         </div>
         <div className="space-y-1">
           <Label>Ad</Label>
-          <Input value={ad} onChange={(e) => setAd(e.target.value)} />
+          <Input value={ad} onChange={(e) => setAd(e.target.value)} maxLength={50} />
         </div>
         <div className="space-y-1">
           <Label>Soyad</Label>
-          <Input value={soyad} onChange={(e) => setSoyad(e.target.value)} />
+          <Input value={soyad} onChange={(e) => setSoyad(e.target.value)} maxLength={50} />
         </div>
         <div className="space-y-1">
           <Label>Görev</Label>
-          <Input value={gorev} onChange={(e) => setGorev(e.target.value)} />
+          <Input value={gorev} onChange={(e) => setGorev(e.target.value)} maxLength={50} />
         </div>
         <div className="space-y-1">
           <Label>Firma</Label>
-          <Input value={firma} onChange={(e) => setFirma(e.target.value)} />
+          <Input value={firma} onChange={(e) => setFirma(e.target.value)} maxLength={100} />
         </div>
       </div>
       <Button type="button" size="sm" className="mt-3" disabled={isSubmitting} onClick={handleSave}>

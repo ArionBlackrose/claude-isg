@@ -41,7 +41,7 @@ export default async function PersonelPage() {
         <h2 className="mb-4 font-heading text-xl font-bold tracking-wide uppercase">
           Personel Listesi
         </h2>
-        <PersonelTable rows={rows} />
+        <PersonelTable rows={rows} isAdmin={isAdmin} />
       </div>
     </div>
   );

@@ -1,8 +1,16 @@
 import { z } from 'zod';
 
-export const loginSchema = z.object({
+export const requestCodeSchema = z.object({
   email: z.email('Geçerli bir e-posta adresi girin.'),
-  password: z.string().min(8, 'Şifre en az 8 karakter olmalı.'),
 });
 
-export type LoginInput = z.infer<typeof loginSchema>;
+export type RequestCodeInput = z.infer<typeof requestCodeSchema>;
+
+export const verifyCodeSchema = z.object({
+  otp: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, '6 haneli kodu girin.'),
+});
+
+export type VerifyCodeInput = z.infer<typeof verifyCodeSchema>;

@@ -1,6 +1,8 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -18,6 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { deletePersonnel } from '@/actions/personnel';
+import { PersonelEditDialog } from './personel-edit-dialog';
 
 export type PersonelRow = {
   id: string;
@@ -52,10 +56,31 @@ function fmtDate(d: string | null) {
   return `${day}.${m}.${y}`;
 }
 
-export function PersonelTable({ rows }: { rows: PersonelRow[] }) {
+export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin: boolean }) {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [durumFilter, setDurumFilter] = useState('all');
   const [openHistoryId, setOpenHistoryId] = useState<string | null>(null);
+  const [editingPersonel, setEditingPersonel] = useState<PersonelRow | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  async function handleDelete(p: PersonelRow) {
+    if (
+      !window.confirm(
+        `"${p.ad} ${p.soyad}" personelini silmek istediğinize emin misiniz?\n\nBu personele ait eğitim kayıtları ve geçmiş dönemleri de birlikte silinecektir.`,
+      )
+    )
+      return;
+    setPendingDeleteId(p.id);
+    const result = await deletePersonnel(p.id);
+    setPendingDeleteId(null);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('Silindi.');
+    router.refresh();
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -102,6 +127,7 @@ export function PersonelTable({ rows }: { rows: PersonelRow[] }) {
                 <TableHead>İşe Giriş</TableHead>
                 <TableHead>Durum</TableHead>
                 <TableHead />
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -141,10 +167,26 @@ export function PersonelTable({ rows }: { rows: PersonelRow[] }) {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
+                    <TableCell className="space-x-2 whitespace-nowrap">
+                      <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
+                        Düzenle
+                      </Button>
+                      {isAdmin && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-danger text-danger hover:bg-danger/10"
+                          disabled={pendingDeleteId === p.id}
+                          onClick={() => handleDelete(p)}
+                        >
+                          Sil
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                   {openHistoryId === p.id && p.history.length > 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="bg-panel-2 p-4">
+                      <TableCell colSpan={10} className="bg-panel-2 p-4">
                         <div className="mb-2 text-xs text-muted-foreground">
                           <b>
                             {p.ad} {p.soyad}
@@ -192,6 +234,15 @@ export function PersonelTable({ rows }: { rows: PersonelRow[] }) {
             </TableBody>
           </Table>
         </div>
+      )}
+      {editingPersonel && (
+        <PersonelEditDialog
+          personnel={editingPersonel}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingPersonel(null);
+          }}
+        />
       )}
     </div>
   );

@@ -1,15 +1,13 @@
 import { eq } from 'drizzle-orm';
-import { auth } from '../lib/auth';
 import { db } from './index';
 import { user } from './auth-schema';
 
 async function seed() {
   const email = process.env.SEED_ADMIN_EMAIL;
-  const password = process.env.SEED_ADMIN_PASSWORD;
   const name = process.env.SEED_ADMIN_NAME ?? 'Sistem Yöneticisi';
 
-  if (!email || !password) {
-    console.error('SEED_ADMIN_EMAIL ve SEED_ADMIN_PASSWORD .env dosyasında tanımlı olmalı.');
+  if (!email) {
+    console.error('SEED_ADMIN_EMAIL .env dosyasında tanımlı olmalı.');
     process.exit(1);
   }
 
@@ -23,9 +21,16 @@ async function seed() {
     return;
   }
 
-  const result = await auth.api.signUpEmail({ body: { email, password, name } });
-  await db.update(user).set({ role: 'admin' }).where(eq(user.id, result.user.id));
-  console.log(`İlk admin kullanıcısı oluşturuldu: ${email}`);
+  await db.insert(user).values({
+    id: crypto.randomUUID(),
+    name,
+    email,
+    emailVerified: true,
+    role: 'admin',
+  });
+  console.log(
+    `İlk admin kullanıcısı oluşturuldu: ${email} — şifre yok, giriş yaparken e-postaya gönderilen 6 haneli kodu kullanın.`,
+  );
 }
 
 seed()

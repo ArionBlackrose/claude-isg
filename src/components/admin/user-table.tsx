@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -19,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { updateUserRole } from '@/actions/users';
+import { UserEditDialog } from './user-edit-dialog';
 
 const ROLE_LABELS: Record<string, string> = { admin: 'Yönetici', user: 'Kullanıcı' };
 
@@ -38,6 +40,7 @@ export function UserTable({
 }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
 
   async function handleRoleChange(userId: string, role: string | null) {
     if (!role || (role !== 'admin' && role !== 'user')) return;
@@ -60,6 +63,7 @@ export function UserTable({
             <TableHead>Ad Soyad</TableHead>
             <TableHead>E-posta</TableHead>
             <TableHead>Rol</TableHead>
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -86,11 +90,25 @@ export function UserTable({
                     </SelectContent>
                   </Select>
                 </TableCell>
+                <TableCell>
+                  <Button size="sm" variant="outline" onClick={() => setEditingUser(u)}>
+                    Düzenle
+                  </Button>
+                </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
+      {editingUser && (
+        <UserEditDialog
+          user={editingUser}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingUser(null);
+          }}
+        />
+      )}
     </div>
   );
 }
