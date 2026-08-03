@@ -10,6 +10,18 @@ import { Label } from '@/components/ui/label';
 import { authClient } from '@/lib/auth-client';
 import { loginSchema, type LoginInput } from '@/schemas/auth';
 
+const ERROR_MESSAGES_TR: Record<string, string> = {
+  'Invalid email or password': 'E-posta veya şifre hatalı.',
+  'Invalid email': 'Geçersiz e-posta adresi.',
+  'User not found': 'Bu e-posta ile kayıtlı kullanıcı bulunamadı.',
+  'Email not verified': 'E-posta adresi doğrulanmamış.',
+};
+
+function translateAuthError(message: string | undefined): string {
+  if (!message) return 'Giriş başarısız. Bilgilerinizi kontrol edin.';
+  return ERROR_MESSAGES_TR[message] ?? 'E-posta veya şifre hatalı.';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -26,7 +38,7 @@ export default function LoginPage() {
       password: values.password,
     });
     if (error) {
-      setServerError(error.message ?? 'Giriş başarısız. Bilgilerinizi kontrol edin.');
+      setServerError(translateAuthError(error.message));
       return;
     }
     router.push('/');
