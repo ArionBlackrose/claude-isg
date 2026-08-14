@@ -4,14 +4,14 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { training, trainingRecord } from '@/db/schema';
-import { requireAdmin, requireSession } from '@/lib/session';
+import { requireAdmin } from '@/lib/session';
 import { trainingSchema } from '@/schemas/training';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type CreateResult = { ok: true; id: string } | { ok: false; error: string };
 
 export async function createTraining(input: unknown): Promise<CreateResult> {
-  await requireSession();
+  await requireAdmin();
   const parsed = trainingSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };

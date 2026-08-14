@@ -20,11 +20,8 @@ import {
   updateRecord,
   uploadRecordCertificate,
 } from '@/actions/records';
+import { todayStr } from '@/lib/training-status';
 import type { LogRecord } from './log-table';
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function KayitEditDialog({
   open,
@@ -34,6 +31,7 @@ export function KayitEditDialog({
   personName,
   trainingName,
   records,
+  isAdmin,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,6 +40,7 @@ export function KayitEditDialog({
   personName: string;
   trainingName: string;
   records: LogRecord[];
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -183,15 +182,17 @@ export function KayitEditDialog({
                   <Button size="sm" disabled={pendingId === r.id} onClick={() => handleSave(r)}>
                     Kaydet
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-danger text-danger hover:bg-danger/10"
-                    disabled={pendingId === r.id}
-                    onClick={() => handleDelete(r)}
-                  >
-                    Sil
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-danger text-danger hover:bg-danger/10"
+                      disabled={pendingId === r.id}
+                      onClick={() => handleDelete(r)}
+                    >
+                      Sil
+                    </Button>
+                  )}
                   <div className="col-span-full flex items-center gap-2.5 text-xs">
                     {r.driveWebViewLink ? (
                       <a

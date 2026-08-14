@@ -17,11 +17,8 @@ import {
 } from '@/components/ui/select';
 import { updatePersonnel } from '@/actions/personnel';
 import { personnelSchema, type PersonnelInput, type PersonnelOutput } from '@/schemas/personnel';
+import { todayStr } from '@/lib/training-status';
 import type { PersonelRow } from './personel-table';
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function PersonelEditDialog({
   personnel,

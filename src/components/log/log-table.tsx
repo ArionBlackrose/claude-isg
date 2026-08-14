@@ -77,10 +77,12 @@ export function LogTable({
   personnel,
   trainings,
   records,
+  isAdmin,
 }: {
   personnel: LogPersonel[];
   trainings: LogTraining[];
   records: LogRecord[];
+  isAdmin: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [durumFilter, setDurumFilter] = useState('all');
@@ -402,6 +404,7 @@ export function LogTable({
           records={records.filter(
             (r) => r.personnelId === editing.personnelId && r.trainingId === editing.trainingId,
           )}
+          isAdmin={isAdmin}
         />
       )}
     </div>

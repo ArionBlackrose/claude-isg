@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
-import { requireSession } from '@/lib/session';
+import { requireAdmin, requireSession } from '@/lib/session';
 import { normName } from '@/lib/excel';
 import { recordSchema, recordUpdateSchema } from '@/schemas/record';
 import { deleteCertificate, DriveNotConfiguredError, uploadCertificate } from '@/lib/drive';
@@ -54,7 +54,7 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
 }
 
 export async function deleteRecord(id: string): Promise<ActionResult> {
-  await requireSession();
+  await requireAdmin();
   const [existing] = await db.select().from(trainingRecord).where(eq(trainingRecord.id, id));
   if (existing?.driveFileId) {
     await deleteCertificate(existing.driveFileId).catch(() => {});
@@ -178,9 +178,15 @@ export async function importRecordsFromExcel(
       egitimCreated++;
     }
 
-    const sonuc = VALID_SONUC.has(sonucRaw)
-      ? (sonucRaw as 'Başarılı' | 'Başarısız' | 'Katılmadı')
-      : 'Başarılı';
+    let sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
+    if (!sonucRaw) {
+      sonuc = 'Başarılı';
+    } else if (VALID_SONUC.has(sonucRaw)) {
+      sonuc = sonucRaw as 'Başarılı' | 'Başarısız' | 'Katılmadı';
+    } else {
+      skipped.push({ row: rowNo, reason: `Geçersiz sonuç değeri: "${sonucRaw}".` });
+      continue;
+    }
 
     toInsert.push({
       personnelId: person.id,

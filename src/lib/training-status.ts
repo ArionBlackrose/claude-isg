@@ -19,17 +19,25 @@ export type TrainingStatus = {
 };
 
 export function addMonths(dateStr: string, months: number): string {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setMonth(d.getMonth() + months);
-  return d.toISOString().slice(0, 10);
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const totalMonths = year * 12 + (month - 1) + months;
+  const targetYear = Math.floor(totalMonths / 12);
+  const targetMonthIndex = ((totalMonths % 12) + 12) % 12;
+  const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonthIndex + 1, 0)).getUTCDate();
+  const targetDay = Math.min(day, daysInTargetMonth);
+  const mm = String(targetMonthIndex + 1).padStart(2, '0');
+  const dd = String(targetDay).padStart(2, '0');
+  return `${targetYear}-${mm}-${dd}`;
 }
 
 export function daysBetween(a: string, b: string): number {
   return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
 }
 
+const istanbulDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' });
+
 export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return istanbulDateFormatter.format(new Date());
 }
 
 /** Bir personelin bir eğitimdeki güncel durumunu, en son "Başarılı" kayıt ve

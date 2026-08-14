@@ -37,12 +37,14 @@ export default async function KatalogPage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border bg-panel p-5">
-        <h2 className="mb-4 font-heading text-xl font-bold tracking-wide uppercase">
-          Yeni Eğitim Türü
-        </h2>
-        <KatalogForm />
-      </div>
+      {isAdmin && (
+        <div className="rounded-lg border border-border bg-panel p-5">
+          <h2 className="mb-4 font-heading text-xl font-bold tracking-wide uppercase">
+            Yeni Eğitim Türü
+          </h2>
+          <KatalogForm />
+        </div>
+      )}
       <div className="rounded-lg border border-border bg-panel p-5">
         <h2 className="mb-1 font-heading text-xl font-bold tracking-wide uppercase">
           Eğitim Kataloğu

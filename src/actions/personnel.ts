@@ -6,6 +6,8 @@ import { db } from '@/db';
 import { personnel, personnelHistory } from '@/db/schema';
 import { requireAdmin, requireSession } from '@/lib/session';
 import { normName, splitName } from '@/lib/excel';
+import { todayStr } from '@/lib/training-status';
+import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
 import { personnelSchema } from '@/schemas/personnel';
 import type { ActionResult, CreateResult } from './training';
 
@@ -92,10 +94,6 @@ export type PersonnelSyncResult =
     }
   | { ok: false; error: string };
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 const toUpperTr = (v: string) => v.toLocaleUpperCase('tr-TR');
 
 export async function syncPersonnelFromExcel(
@@ -123,7 +121,8 @@ export async function syncPersonnelFromExcel(
   // halde sorgu inşa edilir ama hiçbir şey veritabanına yazılmaz.
   db.transaction((tx) => {
     for (const row of rows) {
-      const tcNo = (row['TC KİMLİK NO'] ?? '').trim();
+      const tcNoRaw = (row['TC KİMLİK NO'] ?? '').trim();
+      const tcNo = tcNoRaw && isValidTcKimlikNo(tcNoRaw) ? tcNoRaw : '';
       const adSoyad = toUpperTr((row['ADI SOYADI'] ?? '').trim());
       const firma = toUpperTr((row['FİRMA ADI'] ?? '').trim());
       const gorev = toUpperTr((row['GÖREV'] ?? '').trim());
@@ -152,9 +151,10 @@ export async function syncPersonnelFromExcel(
             })
             .run();
         }
+        const resolvedTcNo = match.tcNo || tcNo || null;
         tx.update(personnel)
           .set({
-            tcNo: match.tcNo || tcNo || null,
+            tcNo: resolvedTcNo,
             firma: firma || match.firma,
             gorev: gorev || match.gorev,
             dogumTarihi: match.dogumTarihi || dogumTarihi || null,
@@ -164,6 +164,7 @@ export async function syncPersonnelFromExcel(
           })
           .where(eq(personnel.id, match.id))
           .run();
+        if (resolvedTcNo) byTc.set(resolvedTcNo, { ...match, tcNo: resolvedTcNo });
         updated++;
       } else {
         const { ad, soyad } = splitName(adSoyad);
@@ -182,6 +183,8 @@ export async function syncPersonnelFromExcel(
           .returning()
           .get();
         matchedIds.add(inserted.id);
+        if (inserted.tcNo) byTc.set(inserted.tcNo, inserted);
+        byName.set(normName(adSoyad), inserted);
         created++;
       }
     }
