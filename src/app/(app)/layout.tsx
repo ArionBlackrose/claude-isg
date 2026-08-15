@@ -6,7 +6,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await requireSession();
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-7">
+    <div className="mx-auto max-w-[1800px] px-5 py-7">
       <Header userName={session.user.name} userEmail={session.user.email} />
       <TabsNav isAdmin={session.user.role === 'admin'} />
       {children}
