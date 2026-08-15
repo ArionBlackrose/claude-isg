@@ -47,6 +47,7 @@ export function PersonelEditDialog({
       calismaSekli: personnel.calismaSekli ?? 'Tam Zamanlı',
       dogumTarihi: personnel.dogumTarihi ?? '',
       iseGirisTarihi: personnel.iseGirisTarihi ?? '',
+      durum: personnel.durum,
     },
   });
 
@@ -138,6 +139,21 @@ export function PersonelEditDialog({
                 <SelectContent>
                   <SelectItem value="Tam Zamanlı">Tam Zamanlı</SelectItem>
                   <SelectItem value="Geçici Görev">Geçici Görev</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-durum">Durum</Label>
+              <Select
+                value={watch('durum')}
+                onValueChange={(v) => setValue('durum', (v as 'Güncel' | 'Çıkış') ?? 'Güncel')}
+              >
+                <SelectTrigger id="edit-durum" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Güncel">Güncel</SelectItem>
+                  <SelectItem value="Çıkış">Çıkış</SelectItem>
                 </SelectContent>
               </Select>
             </div>

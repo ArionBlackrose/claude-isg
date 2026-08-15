@@ -70,6 +70,7 @@ export const personnelSchema = z.object({
   calismaSekli: z.string().trim().optional(),
   dogumTarihi: dogumTarihiField,
   iseGirisTarihi: iseGirisTarihiField,
+  durum: z.enum(['Güncel', 'Çıkış']).optional(),
 });
 
 /** Form alanlarının (dönüşümden önceki) girdi tipi — react-hook-form için. */

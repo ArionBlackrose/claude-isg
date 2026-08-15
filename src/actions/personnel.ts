@@ -76,12 +76,16 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
   const nextFirma = parsed.data.firma || null;
   const nextGorev = parsed.data.gorev || null;
   const nextCalismaSekli = parsed.data.calismaSekli || null;
+  const nextDurum = parsed.data.durum ?? existing.durum;
+  const durumChangingToExit = existing.durum !== 'Çıkış' && nextDurum === 'Çıkış';
+  const durumReactivating = existing.durum === 'Çıkış' && nextDurum === 'Güncel';
 
-  // Personel başka bir firmaya/göreve geçtiğinde önceki dönemi kaybetmemek
-  // için, Excel senkronizasyonundaki gibi mevcut değerleri geçmişe kaydet.
+  // Personel başka bir firmaya/göreve geçtiğinde ya da "Çıkış" olarak
+  // işaretlendiğinde önceki dönemi kaybetmemek için, Excel
+  // senkronizasyonundaki gibi mevcut değerleri geçmişe kaydet.
   const employmentChanged =
     (existing.firma ?? null) !== nextFirma || (existing.gorev ?? null) !== nextGorev;
-  if (employmentChanged) {
+  if (employmentChanged || durumChangingToExit) {
     await db.insert(personnelHistory).values({
       personnelId: id,
       firma: existing.firma,
@@ -91,6 +95,12 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
       cikisTarihi: todayStr(),
     });
   }
+
+  const nextCikisTarihi = durumChangingToExit
+    ? todayStr()
+    : durumReactivating
+      ? null
+      : existing.cikisTarihi;
 
   await db
     .update(personnel)
@@ -103,6 +113,8 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
       calismaSekli: nextCalismaSekli,
       dogumTarihi: parsed.data.dogumTarihi || null,
       iseGirisTarihi: parsed.data.iseGirisTarihi || null,
+      durum: nextDurum,
+      cikisTarihi: nextCikisTarihi,
     })
     .where(eq(personnel.id, id));
   revalidatePersonnelPaths();
@@ -118,6 +130,7 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
       calismaSekli: nextCalismaSekli,
       dogumTarihi: parsed.data.dogumTarihi || null,
       iseGirisTarihi: parsed.data.iseGirisTarihi || null,
+      durum: nextDurum,
     },
     {
       tcNo: 'TC No',
@@ -128,6 +141,7 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
       calismaSekli: 'Çalışma Şekli',
       dogumTarihi: 'Doğum Tarihi',
       iseGirisTarihi: 'İşe Giriş Tarihi',
+      durum: 'Durum',
     },
   );
   await logActivity(
