@@ -27,6 +27,7 @@ export default async function KatalogPage() {
       ad: t.ad,
       kategori: t.kategori,
       gecerlilikAy: t.gecerlilikAy,
+      egitimSuresi: t.egitimSuresi,
       recordCount: records.filter((r) => r.trainingId === t.id).length,
       expiredCount,
       soonCount,

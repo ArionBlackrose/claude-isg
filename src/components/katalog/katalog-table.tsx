@@ -7,6 +7,13 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -15,12 +22,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { deleteTraining, updateTraining } from '@/actions/training';
+import { TRAINING_CATEGORIES, type TrainingInput } from '@/schemas/training';
 
 export type KatalogRow = {
   id: string;
   ad: string;
   kategori: string;
   gecerlilikAy: number;
+  egitimSuresi: number;
   recordCount: number;
   expiredCount: number;
   soonCount: number;
@@ -29,16 +38,29 @@ export type KatalogRow = {
 export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: boolean }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ ad: string; kategori: string; gecerlilikAy: string }>({
+  const [draft, setDraft] = useState<{
+    ad: string;
+    kategori: TrainingInput['kategori'];
+    gecerlilikAy: string;
+    egitimSuresi: string;
+  }>({
     ad: '',
-    kategori: '',
+    kategori: 'Genel',
     gecerlilikAy: '0',
+    egitimSuresi: '0',
   });
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   function startEdit(row: KatalogRow) {
     setEditingId(row.id);
-    setDraft({ ad: row.ad, kategori: row.kategori, gecerlilikAy: String(row.gecerlilikAy) });
+    setDraft({
+      ad: row.ad,
+      kategori: (TRAINING_CATEGORIES as readonly string[]).includes(row.kategori)
+        ? (row.kategori as TrainingInput['kategori'])
+        : 'Genel',
+      gecerlilikAy: String(row.gecerlilikAy),
+      egitimSuresi: String(row.egitimSuresi),
+    });
   }
 
   async function saveEdit(id: string) {
@@ -47,6 +69,7 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
       ad: draft.ad,
       kategori: draft.kategori,
       gecerlilikAy: Number(draft.gecerlilikAy) || 0,
+      egitimSuresi: Number(draft.egitimSuresi) || 0,
     });
     setPendingId(null);
     if (!result.ok) {
@@ -86,6 +109,7 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
             <TableHead>Eğitim Adı</TableHead>
             <TableHead>Kategori</TableHead>
             <TableHead>Geçerlilik (Ay)</TableHead>
+            <TableHead>Süre (Saat)</TableHead>
             <TableHead>Kayıt Sayısı</TableHead>
             <TableHead>Durum</TableHead>
             {isAdmin && <TableHead />}
@@ -105,10 +129,26 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
                     />
                   </TableCell>
                   <TableCell>
-                    <Input
+                    <Select
                       value={draft.kategori}
-                      onChange={(e) => setDraft((d) => ({ ...d, kategori: e.target.value }))}
-                    />
+                      onValueChange={(v) =>
+                        setDraft((d) => ({
+                          ...d,
+                          kategori: (v as TrainingInput['kategori']) ?? d.kategori,
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TRAINING_CATEGORIES.map((kategori) => (
+                          <SelectItem key={kategori} value={kategori}>
+                            {kategori}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     <Input
@@ -117,6 +157,15 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
                       className="w-24"
                       value={draft.gecerlilikAy}
                       onChange={(e) => setDraft((d) => ({ ...d, gecerlilikAy: e.target.value }))}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="w-24"
+                      value={draft.egitimSuresi}
+                      onChange={(e) => setDraft((d) => ({ ...d, egitimSuresi: e.target.value }))}
                     />
                   </TableCell>
                   <TableCell className="font-mono text-muted-foreground">
@@ -139,6 +188,9 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
                 <TableCell>{row.ad}</TableCell>
                 <TableCell className="text-muted-foreground">{row.kategori || '-'}</TableCell>
                 <TableCell>{row.gecerlilikAy ? `${row.gecerlilikAy} ay` : 'Süresiz'}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.egitimSuresi ? `${row.egitimSuresi} saat` : '-'}
+                </TableCell>
                 <TableCell className="font-mono">{row.recordCount}</TableCell>
                 <TableCell className="space-x-2.5 text-xs whitespace-nowrap">
                   {row.expiredCount > 0 && (

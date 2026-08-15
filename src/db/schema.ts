@@ -43,8 +43,11 @@ export const personnelHistory = sqliteTable('personnel_history', {
 export const training = sqliteTable('training', {
   id: id(),
   ad: text('ad').notNull(),
-  kategori: text('kategori').notNull().default('Genel'),
+  kategori: text('kategori', { enum: ['Genel', 'Zorunlu', 'Özel', 'Uyarı', '3. Taraf'] })
+    .notNull()
+    .default('Genel'),
   gecerlilikAy: integer('gecerlilik_ay').notNull().default(0),
+  egitimSuresi: integer('egitim_suresi').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),

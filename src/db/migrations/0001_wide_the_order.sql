@@ -1,0 +1,1 @@
+ALTER TABLE `training` ADD `egitim_suresi` integer DEFAULT 0 NOT NULL;
