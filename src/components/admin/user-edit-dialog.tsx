@@ -44,20 +44,22 @@ export function UserEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{user.name} — Düzenle</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-user-name">Ad Soyad</Label>
-            <Input id="edit-user-name" maxLength={50} {...register('name')} />
-            {errors.name && <p className="text-xs text-danger">{errors.name.message}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-user-email">E-posta</Label>
-            <Input id="edit-user-email" type="email" {...register('email')} />
-            {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-user-name">Ad Soyad</Label>
+              <Input id="edit-user-name" maxLength={50} {...register('name')} />
+              {errors.name && <p className="text-xs text-danger">{errors.name.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-user-email">E-posta</Label>
+              <Input id="edit-user-email" type="email" {...register('email')} />
+              {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
+            </div>
           </div>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
