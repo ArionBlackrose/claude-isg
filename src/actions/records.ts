@@ -7,7 +7,7 @@ import { personnel, training, trainingRecord } from '@/db/schema';
 import { requireAdmin, requireSession } from '@/lib/session';
 import { normName } from '@/lib/excel';
 import { logActivity, diffSummary } from '@/lib/audit';
-import { recordSchema, recordUpdateSchema } from '@/schemas/record';
+import { recordSchema, recordUpdateSchema, recordsBatchSchema } from '@/schemas/record';
 import { deleteCertificate, DriveNotConfiguredError, uploadCertificate } from '@/lib/drive';
 import type { ActionResult } from './training';
 
@@ -57,6 +57,52 @@ export async function createRecord(input: unknown): Promise<ActionResult> {
     `Eğitim kaydı eklendi: ${parsed.data.tarih} — ${parsed.data.sonuc}.`,
   );
   return { ok: true };
+}
+
+export type RecordsBatchResult = { ok: true; created: number } | { ok: false; error: string };
+
+/** Secilen her personel x egitim kombinasyonu icin ayri bir kayit olusturur
+ * (bir kisiye birden fazla egitim, ya da bir egitimi birden fazla kisiye
+ * tek seferde eklemek icin). */
+export async function createRecords(input: unknown): Promise<RecordsBatchResult> {
+  const session = await requireSession();
+  const parsed = recordsBatchSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
+  }
+  const { tarih, sonuc, not } = parsed.data;
+  const personnelIds = Array.from(new Set(parsed.data.personnelIds));
+  const trainingIds = Array.from(new Set(parsed.data.trainingIds));
+
+  let created = 0;
+  for (const personnelId of personnelIds) {
+    for (const trainingId of trainingIds) {
+      const [inserted] = await db
+        .insert(trainingRecord)
+        .values({
+          personnelId,
+          trainingId,
+          tarih,
+          sonuc,
+          not: not || null,
+          createdByUserId: session.user.id,
+        })
+        .returning();
+      created++;
+      const label = await recordLabel(personnelId, trainingId);
+      await logActivity(
+        session,
+        'create',
+        'kayit',
+        inserted.id,
+        label,
+        `Eğitim kaydı eklendi: ${tarih} — ${sonuc}.`,
+      );
+    }
+  }
+
+  revalidateRecordPaths();
+  return { ok: true, created };
 }
 
 export async function updateRecord(id: string, input: unknown): Promise<ActionResult> {

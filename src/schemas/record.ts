@@ -18,6 +18,16 @@ export const recordUpdateSchema = z.object({
 
 export type RecordUpdateInput = z.infer<typeof recordUpdateSchema>;
 
+export const recordsBatchSchema = z.object({
+  personnelIds: z.array(z.string().trim().min(1)).min(1, 'En az bir personel seçin.'),
+  trainingIds: z.array(z.string().trim().min(1)).min(1, 'En az bir eğitim seçin.'),
+  tarih: z.string().trim().min(1, 'Tarih zorunlu.'),
+  sonuc: z.enum(['Başarılı', 'Başarısız', 'Katılmadı']),
+  not: z.string().trim().optional(),
+});
+
+export type RecordsBatchInput = z.infer<typeof recordsBatchSchema>;
+
 export const recordExcelRowSchema = z.object({
   tcNo: z.string().trim().optional(),
   adSoyad: z.string().trim().optional(),

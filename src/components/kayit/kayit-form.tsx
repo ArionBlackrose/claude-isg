@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { createRecord } from '@/actions/records';
+import { createRecords } from '@/actions/records';
 import { todayStr } from '@/lib/training-status';
 import { QuickAddPersonnel } from './quick-add-personnel';
 import { QuickAddTraining } from './quick-add-training';
@@ -39,8 +39,9 @@ export function KayitForm({
   const [trainingList, setTrainingList] = useState(trainings);
 
   const [personSearch, setPersonSearch] = useState('');
-  const [personnelId, setPersonnelId] = useState('');
-  const [trainingId, setTrainingId] = useState('');
+  const [trainingSearch, setTrainingSearch] = useState('');
+  const [personnelIds, setPersonnelIds] = useState<Set<string>>(new Set());
+  const [trainingIds, setTrainingIds] = useState<Set<string>>(new Set());
   const [tarih, setTarih] = useState(todayStr());
   const [sonuc, setSonuc] = useState<'Başarılı' | 'Başarısız' | 'Katılmadı'>('Başarılı');
   const [not, setNot] = useState('');
@@ -51,94 +52,127 @@ export function KayitForm({
 
   const filteredPersonel = useMemo(() => {
     const q = personSearch.trim().toLocaleUpperCase('tr-TR');
-    let list = personList;
-    if (q) {
-      list = list.filter((p) =>
-        `${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleUpperCase('tr-TR').includes(q),
-      );
-    }
-    return list.slice(0, 200);
+    if (!q) return personList;
+    return personList.filter((p) =>
+      `${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleUpperCase('tr-TR').includes(q),
+    );
   }, [personList, personSearch]);
 
-  function handlePersonSearchChange(value: string) {
-    setPersonSearch(value);
-    const q = value.trim().toLocaleUpperCase('tr-TR');
-    const matches = q
-      ? personList.filter((p) =>
-          `${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleUpperCase('tr-TR').includes(q),
-        )
-      : personList;
-    if (matches.length === 1) {
-      setPersonnelId(matches[0].id);
-    }
+  const filteredTrainings = useMemo(() => {
+    const q = trainingSearch.trim().toLocaleUpperCase('tr-TR');
+    if (!q) return trainingList;
+    return trainingList.filter((t) => t.ad.toLocaleUpperCase('tr-TR').includes(q));
+  }, [trainingList, trainingSearch]);
+
+  function togglePersonel(id: string) {
+    setPersonnelIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleTraining(id: string) {
+    setTrainingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   async function handleSubmit() {
-    if (!personnelId || !trainingId || !tarih) {
-      toast.error('Lütfen personel, eğitim ve tarih alanlarını doldurun.');
+    if (!personnelIds.size || !trainingIds.size || !tarih) {
+      toast.error('Lütfen en az bir personel, en az bir eğitim ve tarih seçin.');
       return;
     }
     setIsSubmitting(true);
-    const result = await createRecord({ personnelId, trainingId, tarih, sonuc, not });
+    const result = await createRecords({
+      personnelIds: Array.from(personnelIds),
+      trainingIds: Array.from(trainingIds),
+      tarih,
+      sonuc,
+      not,
+    });
     setIsSubmitting(false);
     if (!result.ok) {
       toast.error(result.error);
       return;
     }
-    toast.success('Kayıt eklendi.');
+    toast.success(result.created === 1 ? '1 kayıt eklendi.' : `${result.created} kayıt eklendi.`);
     setNot('');
+    setPersonnelIds(new Set());
+    setTrainingIds(new Set());
     router.refresh();
   }
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
         <div className="space-y-1.5">
-          <Label>Personel</Label>
+          <div className="flex items-center justify-between">
+            <Label>Personel {personnelIds.size > 0 && `(${personnelIds.size} seçili)`}</Label>
+          </div>
           <Input
             value={personSearch}
-            onChange={(e) => handlePersonSearchChange(e.target.value)}
+            onChange={(e) => setPersonSearch(e.target.value)}
             placeholder="Ad, soyad veya TC ile arayın..."
-            className="mb-1.5"
           />
-          <Select value={personnelId} onValueChange={(v) => setPersonnelId(v ?? '')}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Önce yukarıdan arayın">
-                {(v: string | null) => {
-                  const p = personList.find((x) => x.id === v);
-                  return p ? `${p.ad} ${p.soyad} — ${p.firma || ''}` : 'Önce yukarıdan arayın';
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {filteredPersonel.length === 0 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">Sonuç bulunamadı</div>
-              )}
-              {filteredPersonel.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.ad} {p.soyad} — {p.firma || ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="max-h-52 space-y-0.5 overflow-auto rounded-md border border-border bg-panel-2 p-1.5">
+            {filteredPersonel.length === 0 && (
+              <p className="px-2 py-1.5 text-sm text-muted-foreground">Sonuç bulunamadı</p>
+            )}
+            {filteredPersonel.map((p) => (
+              <label
+                key={p.id}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-panel"
+              >
+                <input
+                  type="checkbox"
+                  checked={personnelIds.has(p.id)}
+                  onChange={() => togglePersonel(p.id)}
+                  className="accent-primary"
+                />
+                <span>
+                  {p.ad} {p.soyad}
+                  {p.firma ? ` — ${p.firma}` : ''}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
         <div className="space-y-1.5">
-          <Label>Eğitim</Label>
-          <Select value={trainingId} onValueChange={(v) => setTrainingId(v ?? '')}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Seçiniz...">
-                {(v: string | null) => trainingList.find((t) => t.id === v)?.ad ?? 'Seçiniz...'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {trainingList.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.ad}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center justify-between">
+            <Label>Eğitim {trainingIds.size > 0 && `(${trainingIds.size} seçili)`}</Label>
+          </div>
+          <Input
+            value={trainingSearch}
+            onChange={(e) => setTrainingSearch(e.target.value)}
+            placeholder="Eğitim adıyla arayın..."
+          />
+          <div className="max-h-52 space-y-0.5 overflow-auto rounded-md border border-border bg-panel-2 p-1.5">
+            {filteredTrainings.length === 0 && (
+              <p className="px-2 py-1.5 text-sm text-muted-foreground">Sonuç bulunamadı</p>
+            )}
+            {filteredTrainings.map((t) => (
+              <label
+                key={t.id}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-panel"
+              >
+                <input
+                  type="checkbox"
+                  checked={trainingIds.has(t.id)}
+                  onChange={() => toggleTraining(t.id)}
+                  className="accent-primary"
+                />
+                <span>{t.ad}</span>
+              </label>
+            ))}
+          </div>
         </div>
+      </div>
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5">
           <Label>Tarih</Label>
           <Input type="date" value={tarih} onChange={(e) => setTarih(e.target.value)} />
@@ -156,18 +190,22 @@ export function KayitForm({
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label>Not (opsiyonel)</Label>
+          <Input
+            value={not}
+            onChange={(e) => setNot(e.target.value)}
+            placeholder="Sertifika no, açıklama vb."
+          />
+        </div>
       </div>
-      <div className="space-y-1.5">
-        <Label>Not (opsiyonel)</Label>
-        <Input
-          value={not}
-          onChange={(e) => setNot(e.target.value)}
-          placeholder="Sertifika no, açıklama vb."
-        />
-      </div>
+      <p className="text-xs text-muted-foreground">
+        Seçilen her personel, seçilen her eğitimle eşleştirilip ayrı bir kayıt olarak eklenir — aynı
+        anda bir kişiye birden fazla eğitim, ya da bir eğitimi birden fazla kişiye ekleyebilirsiniz.
+      </p>
       <div className="flex flex-wrap items-center gap-2.5">
         <Button type="button" disabled={isSubmitting} onClick={handleSubmit}>
-          {isSubmitting ? 'Kaydediliyor...' : 'Kaydı Ekle'}
+          {isSubmitting ? 'Kaydediliyor...' : 'Kayıtları Ekle'}
         </Button>
         <Button
           type="button"
@@ -191,8 +229,7 @@ export function KayitForm({
         <QuickAddPersonnel
           onCreated={(p) => {
             setPersonList((list) => [...list, p]);
-            setPersonSearch(`${p.ad} ${p.soyad}`);
-            setPersonnelId(p.id);
+            setPersonnelIds((prev) => new Set(prev).add(p.id));
             setShowAddPersonel(false);
           }}
         />
@@ -201,7 +238,7 @@ export function KayitForm({
         <QuickAddTraining
           onCreated={(t) => {
             setTrainingList((list) => [...list, t]);
-            setTrainingId(t.id);
+            setTrainingIds((prev) => new Set(prev).add(t.id));
             setShowAddEgitim(false);
           }}
         />

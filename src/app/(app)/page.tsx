@@ -45,9 +45,7 @@ export default async function KayitEklePage() {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-border bg-panel p-5">
-        <h2 className="mb-1 font-heading text-xl font-bold tracking-wide uppercase">
-          Yeni Eğitim Kaydı
-        </h2>
+        <h2 className="mb-1 font-heading text-xl font-bold tracking-wide uppercase">Eğitim Ekle</h2>
         <p className="mb-4 text-xs text-muted-foreground">
           Her kayıt kendi satırı olarak eklenir — mevcut hiçbir veriyi değiştirmez veya üzerine
           yazmaz.
