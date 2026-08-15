@@ -74,6 +74,12 @@ function tagClassFor(code: TrainingStatusCode) {
   return 'tag-none';
 }
 
+function latestRecordFor(personnelId: string, trainingId: string, records: LogRecord[]) {
+  return records
+    .filter((r) => r.personnelId === personnelId && r.trainingId === trainingId)
+    .sort((a, b) => b.tarih.localeCompare(a.tarih))[0];
+}
+
 export function LogTable({
   personnel,
   trainings,
@@ -325,20 +331,34 @@ export function LogTable({
                     </TableCell>
                     {trainings.map((t) => {
                       const s = statusFor(p.id, t.id, records, t);
+                      const rec = latestRecordFor(p.id, t.id, records);
+                      const extra = [
+                        rec?.dosyaNo ? `Dosya No: ${rec.dosyaNo}` : null,
+                        rec?.not ? `Not: ${rec.not}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ');
                       return (
                         <TableCell key={t.id}>
                           <button
                             type="button"
                             className={`tag ${tagClassFor(s.code)} cursor-pointer`}
-                            title={
-                              s.tarih
-                                ? `${fmtDate(s.tarih)} — düzenlemek için tıklayın`
-                                : 'düzenlemek için tıklayın'
-                            }
+                            title={[
+                              s.tarih ? fmtDate(s.tarih) : null,
+                              extra || null,
+                              'düzenlemek için tıklayın',
+                            ]
+                              .filter(Boolean)
+                              .join(' — ')}
                             onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
                           >
                             {s.code === 'valid' ? fmtDate(s.label) : s.label}
                           </button>
+                          {extra && (
+                            <div className="mt-0.5 max-w-32 truncate text-[10px] text-muted-foreground">
+                              {extra}
+                            </div>
+                          )}
                         </TableCell>
                       );
                     })}
