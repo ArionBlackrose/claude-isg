@@ -141,7 +141,6 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
                 <TableHead>İşe Giriş</TableHead>
                 <TableHead>Durum</TableHead>
                 <TableHead />
-                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -174,11 +173,6 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
                       <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
                         {p.durum}
                       </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => setDetayPersonelId(p.id)}>
-                        Detay
-                      </Button>
                     </TableCell>
                     <TableCell className="space-x-2 whitespace-nowrap">
                       <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
