@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
 import { requireAdmin, requireSession } from '@/lib/session';
 import { normName } from '@/lib/excel';
+import { logActivity, diffSummary } from '@/lib/audit';
 import { recordSchema, recordUpdateSchema } from '@/schemas/record';
 import { deleteCertificate, DriveNotConfiguredError, uploadCertificate } from '@/lib/drive';
 import type { ActionResult } from './training';
@@ -15,6 +16,17 @@ function revalidateRecordPaths() {
   revalidatePath('/kayitlar');
   revalidatePath('/rapor');
   revalidatePath('/katalog');
+  revalidatePath('/personel');
+}
+
+async function recordLabel(personnelId: string, trainingId: string): Promise<string> {
+  const [[person], [egitim]] = await Promise.all([
+    db.select().from(personnel).where(eq(personnel.id, personnelId)),
+    db.select().from(training).where(eq(training.id, trainingId)),
+  ]);
+  const personLabel = person ? `${person.ad} ${person.soyad}` : 'bilinmeyen personel';
+  const trainingLabel = egitim ? egitim.ad : 'bilinmeyen eğitim';
+  return `${personLabel} — ${trainingLabel}`;
 }
 
 export async function createRecord(input: unknown): Promise<ActionResult> {
@@ -23,23 +35,39 @@ export async function createRecord(input: unknown): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
   }
-  await db.insert(trainingRecord).values({
-    personnelId: parsed.data.personnelId,
-    trainingId: parsed.data.trainingId,
-    tarih: parsed.data.tarih,
-    sonuc: parsed.data.sonuc,
-    not: parsed.data.not || null,
-    createdByUserId: session.user.id,
-  });
+  const [inserted] = await db
+    .insert(trainingRecord)
+    .values({
+      personnelId: parsed.data.personnelId,
+      trainingId: parsed.data.trainingId,
+      tarih: parsed.data.tarih,
+      sonuc: parsed.data.sonuc,
+      not: parsed.data.not || null,
+      createdByUserId: session.user.id,
+    })
+    .returning();
   revalidateRecordPaths();
+  const label = await recordLabel(parsed.data.personnelId, parsed.data.trainingId);
+  await logActivity(
+    session,
+    'create',
+    'kayit',
+    inserted.id,
+    label,
+    `Eğitim kaydı eklendi: ${parsed.data.tarih} — ${parsed.data.sonuc}.`,
+  );
   return { ok: true };
 }
 
 export async function updateRecord(id: string, input: unknown): Promise<ActionResult> {
-  await requireSession();
+  const session = await requireSession();
   const parsed = recordUpdateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
+  }
+  const [existing] = await db.select().from(trainingRecord).where(eq(trainingRecord.id, id));
+  if (!existing) {
+    return { ok: false, error: 'Kayıt bulunamadı.' };
   }
   await db
     .update(trainingRecord)
@@ -50,17 +78,35 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
     })
     .where(eq(trainingRecord.id, id));
   revalidateRecordPaths();
+  const label = await recordLabel(existing.personnelId, existing.trainingId);
+  const summary = diffSummary(
+    existing,
+    { tarih: parsed.data.tarih, sonuc: parsed.data.sonuc, not: parsed.data.not || null },
+    { tarih: 'Tarih', sonuc: 'Sonuç', not: 'Not' },
+  );
+  await logActivity(session, 'update', 'kayit', id, label, summary);
   return { ok: true };
 }
 
 export async function deleteRecord(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   const [existing] = await db.select().from(trainingRecord).where(eq(trainingRecord.id, id));
   if (existing?.driveFileId) {
     await deleteCertificate(existing.driveFileId).catch(() => {});
   }
   await db.delete(trainingRecord).where(eq(trainingRecord.id, id));
   revalidateRecordPaths();
+  if (existing) {
+    const label = await recordLabel(existing.personnelId, existing.trainingId);
+    await logActivity(
+      session,
+      'delete',
+      'kayit',
+      id,
+      label,
+      `Eğitim kaydı silindi: ${existing.tarih} — ${existing.sonuc}.`,
+    );
+  }
   return { ok: true };
 }
 
@@ -70,7 +116,7 @@ export async function uploadRecordCertificate(
   recordId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireSession();
+  const session = await requireSession();
   const file = formData.get('file');
   if (!(file instanceof File)) {
     return { ok: false, error: 'Dosya bulunamadı.' };
@@ -109,6 +155,8 @@ export async function uploadRecordCertificate(
   }
 
   revalidateRecordPaths();
+  const label = await recordLabel(existing.personnelId, existing.trainingId);
+  await logActivity(session, 'update', 'kayit', recordId, label, 'Sertifika yüklendi.');
   return { ok: true };
 }
 
@@ -205,5 +253,15 @@ export async function importRecordsFromExcel(
   }
 
   revalidateRecordPaths();
+
+  await logActivity(
+    session,
+    'create',
+    'kayit',
+    null,
+    'Excel İçe Aktarma',
+    `${toInsert.length} kayıt eklendi, ${egitimCreated} yeni eğitim türü oluşturuldu, ${skipped.length} satır atlandı.`,
+  );
+
   return { ok: true, imported: toInsert.length, egitimCreated, skipped };
 }

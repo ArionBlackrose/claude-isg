@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { user } from './auth-schema';
 
 export * from './auth-schema';
@@ -52,6 +52,29 @@ export const training = sqliteTable('training', {
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+export const auditLog = sqliteTable(
+  'audit_log',
+  {
+    id: id(),
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    userName: text('user_name').notNull(),
+    action: text('action', { enum: ['create', 'update', 'delete'] }).notNull(),
+    entityType: text('entity_type', {
+      enum: ['personel', 'egitim', 'kayit', 'kullanici'],
+    }).notNull(),
+    entityId: text('entity_id'),
+    entityLabel: text('entity_label').notNull(),
+    summary: text('summary').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index('audit_log_user_id_idx').on(table.userId),
+    index('audit_log_created_at_idx').on(table.createdAt),
+  ],
+);
 
 export const trainingRecord = sqliteTable('training_record', {
   id: id(),

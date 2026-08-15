@@ -8,6 +8,7 @@ import { requireAdmin, requireSession } from '@/lib/session';
 import { normName, splitName } from '@/lib/excel';
 import { todayStr } from '@/lib/training-status';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
+import { logActivity, diffSummary } from '@/lib/audit';
 import { personnelSchema } from '@/schemas/personnel';
 import type { ActionResult, CreateResult } from './training';
 
@@ -25,7 +26,7 @@ async function findTcConflict(tcNo: string | undefined, excludeId?: string) {
 }
 
 export async function createPersonnel(input: unknown): Promise<CreateResult> {
-  await requireSession();
+  const session = await requireSession();
   const parsed = personnelSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -42,11 +43,19 @@ export async function createPersonnel(input: unknown): Promise<CreateResult> {
     .values({ ...parsed.data, durum: 'Güncel' })
     .returning();
   revalidatePersonnelPaths();
+  await logActivity(
+    session,
+    'create',
+    'personel',
+    inserted.id,
+    `${inserted.ad} ${inserted.soyad}`,
+    `Personel eklendi${inserted.firma ? ` (${inserted.firma})` : ''}.`,
+  );
   return { ok: true, id: inserted.id };
 }
 
 export async function updatePersonnel(id: string, input: unknown): Promise<ActionResult> {
-  await requireSession();
+  const session = await requireSession();
   const parsed = personnelSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -58,27 +67,96 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
       error: `Bu TC Kimlik No zaten "${conflict.ad} ${conflict.soyad}" adlı personelde kayıtlı.`,
     };
   }
+
+  const [existing] = await db.select().from(personnel).where(eq(personnel.id, id));
+  if (!existing) {
+    return { ok: false, error: 'Personel bulunamadı.' };
+  }
+
+  const nextFirma = parsed.data.firma || null;
+  const nextGorev = parsed.data.gorev || null;
+  const nextCalismaSekli = parsed.data.calismaSekli || null;
+
+  // Personel başka bir firmaya/göreve geçtiğinde önceki dönemi kaybetmemek
+  // için, Excel senkronizasyonundaki gibi mevcut değerleri geçmişe kaydet.
+  const employmentChanged =
+    (existing.firma ?? null) !== nextFirma || (existing.gorev ?? null) !== nextGorev;
+  if (employmentChanged) {
+    await db.insert(personnelHistory).values({
+      personnelId: id,
+      firma: existing.firma,
+      gorev: existing.gorev,
+      calismaSekli: existing.calismaSekli,
+      girisTarihi: existing.iseGirisTarihi,
+      cikisTarihi: todayStr(),
+    });
+  }
+
   await db
     .update(personnel)
     .set({
       tcNo: parsed.data.tcNo || null,
       ad: parsed.data.ad,
       soyad: parsed.data.soyad,
-      gorev: parsed.data.gorev || null,
-      firma: parsed.data.firma || null,
-      calismaSekli: parsed.data.calismaSekli || null,
+      gorev: nextGorev,
+      firma: nextFirma,
+      calismaSekli: nextCalismaSekli,
       dogumTarihi: parsed.data.dogumTarihi || null,
       iseGirisTarihi: parsed.data.iseGirisTarihi || null,
     })
     .where(eq(personnel.id, id));
   revalidatePersonnelPaths();
+
+  const summary = diffSummary(
+    existing,
+    {
+      tcNo: parsed.data.tcNo || null,
+      ad: parsed.data.ad,
+      soyad: parsed.data.soyad,
+      gorev: nextGorev,
+      firma: nextFirma,
+      calismaSekli: nextCalismaSekli,
+      dogumTarihi: parsed.data.dogumTarihi || null,
+      iseGirisTarihi: parsed.data.iseGirisTarihi || null,
+    },
+    {
+      tcNo: 'TC No',
+      ad: 'Ad',
+      soyad: 'Soyad',
+      gorev: 'Görev',
+      firma: 'Firma',
+      calismaSekli: 'Çalışma Şekli',
+      dogumTarihi: 'Doğum Tarihi',
+      iseGirisTarihi: 'İşe Giriş Tarihi',
+    },
+  );
+  await logActivity(
+    session,
+    'update',
+    'personel',
+    id,
+    `${parsed.data.ad} ${parsed.data.soyad}`,
+    summary,
+  );
+
   return { ok: true };
 }
 
 export async function deletePersonnel(id: string): Promise<ActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
+  const [existing] = await db.select().from(personnel).where(eq(personnel.id, id));
   await db.delete(personnel).where(eq(personnel.id, id));
   revalidatePersonnelPaths();
+  if (existing) {
+    await logActivity(
+      session,
+      'delete',
+      'personel',
+      id,
+      `${existing.ad} ${existing.soyad}`,
+      `Personel silindi (kayıt ve geçmiş verileri birlikte silindi).`,
+    );
+  }
   return { ok: true };
 }
 
@@ -99,7 +177,7 @@ const toUpperTr = (v: string) => v.toLocaleUpperCase('tr-TR');
 export async function syncPersonnelFromExcel(
   rows: PersonnelExcelRawRow[],
 ): Promise<PersonnelSyncResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   if (!Array.isArray(rows) || !rows.length) {
     return { ok: false, error: 'Excel dosyasında satır bulunamadı.' };
@@ -210,6 +288,15 @@ export async function syncPersonnelFromExcel(
   });
 
   revalidatePersonnelPaths();
+
+  await logActivity(
+    session,
+    'update',
+    'personel',
+    null,
+    'Excel Senkronizasyonu',
+    `${created} oluşturuldu, ${updated} güncellendi, ${markedExit} çıkış, ${skipped} atlandı.`,
+  );
 
   return { ok: true, created, updated, markedExit, skipped };
 }

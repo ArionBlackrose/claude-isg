@@ -14,7 +14,13 @@ const TABS = [
 
 export function TabsNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
-  const tabs = isAdmin ? [...TABS, { href: '/admin/kullanicilar', label: 'Kullanıcılar' }] : TABS;
+  const tabs = isAdmin
+    ? [
+        ...TABS,
+        { href: '/admin/kullanicilar', label: 'Kullanıcılar' },
+        { href: '/admin/aktivite', label: 'Aktivite' },
+      ]
+    : TABS;
 
   return (
     <nav className="mb-6 flex flex-wrap gap-1 border-b border-border">

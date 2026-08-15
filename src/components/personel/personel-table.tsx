@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table';
 import { deletePersonnel } from '@/actions/personnel';
 import { PersonelEditDialog } from './personel-edit-dialog';
+import { PersonelDetayDialog } from './personel-detay-dialog';
 
 export type PersonelRow = {
   id: string;
@@ -40,6 +41,16 @@ export type PersonelRow = {
     calismaSekli: string | null;
     girisTarihi: string | null;
     cikisTarihi: string | null;
+  }[];
+  records: {
+    id: string;
+    trainingId: string;
+    egitimAdi: string;
+    tarih: string;
+    sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
+    not: string | null;
+    driveWebViewLink: string | null;
+    createdByName: string;
   }[];
 };
 
@@ -60,7 +71,10 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [durumFilter, setDurumFilter] = useState('all');
-  const [openHistoryId, setOpenHistoryId] = useState<string | null>(null);
+  const [detayPersonelId, setDetayPersonelId] = useState<string | null>(null);
+  const detayPersonel = detayPersonelId
+    ? (rows.find((r) => r.id === detayPersonelId) ?? null)
+    : null;
   const [editingPersonel, setEditingPersonel] = useState<PersonelRow | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -135,7 +149,14 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
                 <Fragment key={p.id}>
                   <TableRow>
                     <TableCell>
-                      {p.ad} {p.soyad}
+                      <button
+                        type="button"
+                        className="text-left text-primary hover:underline"
+                        onClick={() => setDetayPersonelId(p.id)}
+                        title="Tüm verileri görüntüle"
+                      >
+                        {p.ad} {p.soyad}
+                      </button>
                     </TableCell>
                     <TableCell className="font-mono text-muted-foreground">
                       {p.tcNo || '-'}
@@ -155,17 +176,9 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
                       </span>
                     </TableCell>
                     <TableCell>
-                      {p.history.length ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setOpenHistoryId(openHistoryId === p.id ? null : p.id)}
-                        >
-                          Geçmiş ({p.history.length})
-                        </Button>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                      <Button size="sm" variant="outline" onClick={() => setDetayPersonelId(p.id)}>
+                        Detay
+                      </Button>
                     </TableCell>
                     <TableCell className="space-x-2 whitespace-nowrap">
                       <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
@@ -184,51 +197,6 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
                       )}
                     </TableCell>
                   </TableRow>
-                  {openHistoryId === p.id && p.history.length > 0 && (
-                    <TableRow>
-                      <TableCell colSpan={10} className="bg-panel-2 p-4">
-                        <div className="mb-2 text-xs text-muted-foreground">
-                          <b>
-                            {p.ad} {p.soyad}
-                          </b>{' '}
-                          — Önceki Dönemler
-                        </div>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Firma</TableHead>
-                              <TableHead>Görev</TableHead>
-                              <TableHead>Çalışma Şekli</TableHead>
-                              <TableHead>Giriş</TableHead>
-                              <TableHead>Çıkış</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {p.history
-                              .slice()
-                              .reverse()
-                              .map((h, i) => (
-                                <TableRow key={i}>
-                                  <TableCell>{h.firma || '-'}</TableCell>
-                                  <TableCell className="text-muted-foreground">
-                                    {h.gorev || '-'}
-                                  </TableCell>
-                                  <TableCell className="text-muted-foreground">
-                                    {h.calismaSekli || '-'}
-                                  </TableCell>
-                                  <TableCell className="font-mono text-muted-foreground">
-                                    {fmtDate(h.girisTarihi)}
-                                  </TableCell>
-                                  <TableCell className="font-mono text-muted-foreground">
-                                    {fmtDate(h.cikisTarihi)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                          </TableBody>
-                        </Table>
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </Fragment>
               ))}
             </TableBody>
@@ -242,6 +210,16 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
           onOpenChange={(open) => {
             if (!open) setEditingPersonel(null);
           }}
+        />
+      )}
+      {detayPersonel && (
+        <PersonelDetayDialog
+          personnel={detayPersonel}
+          open
+          onOpenChange={(open) => {
+            if (!open) setDetayPersonelId(null);
+          }}
+          isAdmin={isAdmin}
         />
       )}
     </div>
