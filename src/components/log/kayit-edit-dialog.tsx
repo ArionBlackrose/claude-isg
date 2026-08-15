@@ -45,15 +45,18 @@ export function KayitEditDialog({
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<
-    Record<string, { tarih: string; sonuc: string; not: string }>
+    Record<string, { tarih: string; sonuc: string; dosyaNo: string; not: string }>
   >({});
   const [newTarih, setNewTarih] = useState(todayStr());
   const [newSonuc, setNewSonuc] = useState<'Başarılı' | 'Başarısız' | 'Katılmadı'>('Başarılı');
+  const [newDosyaNo, setNewDosyaNo] = useState('');
   const [newNot, setNewNot] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
   function draftFor(r: LogRecord) {
-    return drafts[r.id] ?? { tarih: r.tarih, sonuc: r.sonuc, not: r.not ?? '' };
+    return (
+      drafts[r.id] ?? { tarih: r.tarih, sonuc: r.sonuc, dosyaNo: r.dosyaNo ?? '', not: r.not ?? '' }
+    );
   }
 
   async function handleSave(r: LogRecord) {
@@ -108,6 +111,7 @@ export function KayitEditDialog({
       trainingId,
       tarih: newTarih,
       sonuc: newSonuc,
+      dosyaNo: newDosyaNo,
       not: newNot,
     });
     setIsAdding(false);
@@ -116,6 +120,7 @@ export function KayitEditDialog({
       return;
     }
     toast.success('Eklendi.');
+    setNewDosyaNo('');
     setNewNot('');
     router.refresh();
   }
@@ -140,7 +145,7 @@ export function KayitEditDialog({
               return (
                 <div
                   key={r.id}
-                  className="grid grid-cols-1 items-end gap-2 border-b border-border pb-3 sm:grid-cols-[1fr_1fr_2fr_auto_auto]"
+                  className="grid grid-cols-1 items-end gap-2 border-b border-border pb-3 sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto_auto]"
                 >
                   <div className="space-y-1">
                     <Label>Tarih</Label>
@@ -169,6 +174,15 @@ export function KayitEditDialog({
                         <SelectItem value="Katılmadı">Katılmadı</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Dosya No</Label>
+                    <Input
+                      value={draft.dosyaNo}
+                      onChange={(e) =>
+                        setDrafts((d) => ({ ...d, [r.id]: { ...draft, dosyaNo: e.target.value } }))
+                      }
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label>Not</Label>
@@ -226,7 +240,7 @@ export function KayitEditDialog({
 
           <div className="pt-1">
             <p className="mb-2 text-xs font-semibold text-muted-foreground">+ Yeni Kayıt Ekle</p>
-            <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_2fr_auto]">
+            <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">
               <div className="space-y-1">
                 <Label>Tarih</Label>
                 <Input type="date" value={newTarih} onChange={(e) => setNewTarih(e.target.value)} />
@@ -246,6 +260,14 @@ export function KayitEditDialog({
                     <SelectItem value="Katılmadı">Katılmadı</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Dosya No</Label>
+                <Input
+                  value={newDosyaNo}
+                  onChange={(e) => setNewDosyaNo(e.target.value)}
+                  placeholder="opsiyonel"
+                />
               </div>
               <div className="space-y-1">
                 <Label>Not</Label>

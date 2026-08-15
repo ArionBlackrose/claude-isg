@@ -39,6 +39,7 @@ export type LogRecord = {
   trainingId: string;
   tarih: string;
   sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
+  dosyaNo: string | null;
   not: string | null;
   driveWebViewLink: string | null;
 };
@@ -112,12 +113,13 @@ export function LogTable({
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim().toLocaleLowerCase('tr-TR');
     return personnel.filter((p) => {
       if (durumFilter !== 'all' && p.durum !== durumFilter) return false;
       if (firmaFilter !== 'all' && p.firma !== firmaFilter) return false;
       if (calismaSekliFilter !== 'all' && p.calismaSekli !== calismaSekliFilter) return false;
-      if (q && !`${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLowerCase().includes(q)) return false;
+      if (q && !`${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleLowerCase('tr-TR').includes(q))
+        return false;
       if (egitimDurumFilter !== 'all') {
         const egitimler =
           egitimFilter === 'all' ? trainings : trainings.filter((t) => t.id === egitimFilter);

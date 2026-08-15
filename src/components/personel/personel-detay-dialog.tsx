@@ -50,16 +50,22 @@ export function PersonelDetayDialog({
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ tarih: string; sonuc: string; not: string }>({
+  const [draft, setDraft] = useState<{
+    tarih: string;
+    sonuc: string;
+    dosyaNo: string;
+    not: string;
+  }>({
     tarih: '',
     sonuc: 'Başarılı',
+    dosyaNo: '',
     not: '',
   });
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   function startEdit(r: PersonelRow['records'][number]) {
     setEditingId(r.id);
-    setDraft({ tarih: r.tarih, sonuc: r.sonuc, not: r.not ?? '' });
+    setDraft({ tarih: r.tarih, sonuc: r.sonuc, dosyaNo: r.dosyaNo ?? '', not: r.not ?? '' });
   }
 
   async function saveEdit(id: string) {
@@ -156,6 +162,7 @@ export function PersonelDetayDialog({
                     <TableHead>Eğitim</TableHead>
                     <TableHead>Tarih</TableHead>
                     <TableHead>Sonuç</TableHead>
+                    <TableHead>Dosya No</TableHead>
                     <TableHead>Not</TableHead>
                     <TableHead>Sertifika</TableHead>
                     <TableHead>Girişi Yapan</TableHead>
@@ -197,6 +204,13 @@ export function PersonelDetayDialog({
                           </TableCell>
                           <TableCell>
                             <Input
+                              className="w-32"
+                              value={draft.dosyaNo}
+                              onChange={(e) => setDraft((d) => ({ ...d, dosyaNo: e.target.value }))}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
                               className="w-40"
                               value={draft.not}
                               onChange={(e) => setDraft((d) => ({ ...d, not: e.target.value }))}
@@ -228,6 +242,7 @@ export function PersonelDetayDialog({
                         <TableCell>
                           <span className={`tag ${tagForSonuc(r.sonuc)}`}>{r.sonuc}</span>
                         </TableCell>
+                        <TableCell className="text-muted-foreground">{r.dosyaNo || '-'}</TableCell>
                         <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
                         <TableCell>
                           {r.driveWebViewLink ? (

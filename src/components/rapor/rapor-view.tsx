@@ -87,9 +87,9 @@ export function RaporView({
   );
 
   const filteredPeople = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim().toLocaleLowerCase('tr-TR');
     if (!q) return personnel;
-    return personnel.filter((p) => `${p.ad} ${p.soyad}`.toLowerCase().includes(q));
+    return personnel.filter((p) => `${p.ad} ${p.soyad}`.toLocaleLowerCase('tr-TR').includes(q));
   }, [personnel, search]);
 
   const isFiltered = egitimFilter !== 'all' || durumFilter !== 'all';

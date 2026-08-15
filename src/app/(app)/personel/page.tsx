@@ -33,6 +33,7 @@ export default async function PersonelPage() {
         egitimAdi: trainingMap.get(r.trainingId)?.ad ?? 'Silinmiş eğitim',
         tarih: r.tarih,
         sonuc: r.sonuc,
+        dosyaNo: r.dosyaNo,
         not: r.not,
         driveWebViewLink: r.driveWebViewLink,
         createdByName: r.createdByUserId

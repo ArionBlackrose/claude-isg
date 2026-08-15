@@ -1,0 +1,1 @@
+ALTER TABLE `training_record` ADD `dosya_no` text;

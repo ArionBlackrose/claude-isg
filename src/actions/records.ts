@@ -42,6 +42,7 @@ export async function createRecord(input: unknown): Promise<ActionResult> {
       trainingId: parsed.data.trainingId,
       tarih: parsed.data.tarih,
       sonuc: parsed.data.sonuc,
+      dosyaNo: parsed.data.dosyaNo || null,
       not: parsed.data.not || null,
       createdByUserId: session.user.id,
     })
@@ -70,7 +71,7 @@ export async function createRecords(input: unknown): Promise<RecordsBatchResult>
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
   }
-  const { tarih, sonuc, not } = parsed.data;
+  const { tarih, sonuc, dosyaNo, not } = parsed.data;
   const personnelIds = Array.from(new Set(parsed.data.personnelIds));
   const trainingIds = Array.from(new Set(parsed.data.trainingIds));
 
@@ -84,6 +85,7 @@ export async function createRecords(input: unknown): Promise<RecordsBatchResult>
           trainingId,
           tarih,
           sonuc,
+          dosyaNo: dosyaNo || null,
           not: not || null,
           createdByUserId: session.user.id,
         })
@@ -120,6 +122,7 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
     .set({
       tarih: parsed.data.tarih,
       sonuc: parsed.data.sonuc,
+      dosyaNo: parsed.data.dosyaNo || null,
       not: parsed.data.not || null,
     })
     .where(eq(trainingRecord.id, id));
@@ -127,8 +130,13 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
   const label = await recordLabel(existing.personnelId, existing.trainingId);
   const summary = diffSummary(
     existing,
-    { tarih: parsed.data.tarih, sonuc: parsed.data.sonuc, not: parsed.data.not || null },
-    { tarih: 'Tarih', sonuc: 'Sonuç', not: 'Not' },
+    {
+      tarih: parsed.data.tarih,
+      sonuc: parsed.data.sonuc,
+      dosyaNo: parsed.data.dosyaNo || null,
+      not: parsed.data.not || null,
+    },
+    { tarih: 'Tarih', sonuc: 'Sonuç', dosyaNo: 'Dosya No', not: 'Not' },
   );
   await logActivity(session, 'update', 'kayit', id, label, summary);
   return { ok: true };

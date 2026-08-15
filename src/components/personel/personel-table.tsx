@@ -48,6 +48,7 @@ export type PersonelRow = {
     egitimAdi: string;
     tarih: string;
     sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
+    dosyaNo: string | null;
     not: string | null;
     driveWebViewLink: string | null;
     createdByName: string;
@@ -97,10 +98,11 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
   }
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim().toLocaleLowerCase('tr-TR');
     return rows.filter((p) => {
       if (durumFilter !== 'all' && p.durum !== durumFilter) return false;
-      if (q && !`${p.ad} ${p.soyad} ${p.firma ?? ''}`.toLowerCase().includes(q)) return false;
+      if (q && !`${p.ad} ${p.soyad} ${p.firma ?? ''}`.toLocaleLowerCase('tr-TR').includes(q))
+        return false;
       return true;
     });
   }, [rows, search, durumFilter]);

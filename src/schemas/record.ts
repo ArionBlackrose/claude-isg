@@ -5,6 +5,7 @@ export const recordSchema = z.object({
   trainingId: z.string().trim().min(1, 'Eğitim seçimi zorunlu.'),
   tarih: z.string().trim().min(1, 'Tarih zorunlu.'),
   sonuc: z.enum(['Başarılı', 'Başarısız', 'Katılmadı']),
+  dosyaNo: z.string().trim().optional(),
   not: z.string().trim().optional(),
 });
 
@@ -13,6 +14,7 @@ export type RecordInput = z.infer<typeof recordSchema>;
 export const recordUpdateSchema = z.object({
   tarih: z.string().trim().min(1, 'Tarih zorunlu.'),
   sonuc: z.enum(['Başarılı', 'Başarısız', 'Katılmadı']),
+  dosyaNo: z.string().trim().optional(),
   not: z.string().trim().optional(),
 });
 
@@ -23,6 +25,7 @@ export const recordsBatchSchema = z.object({
   trainingIds: z.array(z.string().trim().min(1)).min(1, 'En az bir eğitim seçin.'),
   tarih: z.string().trim().min(1, 'Tarih zorunlu.'),
   sonuc: z.enum(['Başarılı', 'Başarısız', 'Katılmadı']),
+  dosyaNo: z.string().trim().optional(),
   not: z.string().trim().optional(),
 });
 

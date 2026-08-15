@@ -44,6 +44,7 @@ export function KayitForm({
   const [trainingIds, setTrainingIds] = useState<Set<string>>(new Set());
   const [tarih, setTarih] = useState(todayStr());
   const [sonuc, setSonuc] = useState<'Başarılı' | 'Başarısız' | 'Katılmadı'>('Başarılı');
+  const [dosyaNo, setDosyaNo] = useState('');
   const [not, setNot] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -93,6 +94,7 @@ export function KayitForm({
       trainingIds: Array.from(trainingIds),
       tarih,
       sonuc,
+      dosyaNo,
       not,
     });
     setIsSubmitting(false);
@@ -101,6 +103,7 @@ export function KayitForm({
       return;
     }
     toast.success(result.created === 1 ? '1 kayıt eklendi.' : `${result.created} kayıt eklendi.`);
+    setDosyaNo('');
     setNot('');
     setPersonnelIds(new Set());
     setTrainingIds(new Set());
@@ -190,13 +193,17 @@ export function KayitForm({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
-          <Label>Not (opsiyonel)</Label>
+        <div className="space-y-1.5">
+          <Label>Dosya No (opsiyonel)</Label>
           <Input
-            value={not}
-            onChange={(e) => setNot(e.target.value)}
-            placeholder="Sertifika no, açıklama vb."
+            value={dosyaNo}
+            onChange={(e) => setDosyaNo(e.target.value)}
+            placeholder="Eğitim evrağı dosya no"
           />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Not (opsiyonel)</Label>
+          <Input value={not} onChange={(e) => setNot(e.target.value)} placeholder="Açıklama vb." />
         </div>
       </div>
       <p className="text-xs text-muted-foreground">

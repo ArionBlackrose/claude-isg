@@ -86,6 +86,7 @@ export const trainingRecord = sqliteTable('training_record', {
     .references(() => training.id, { onDelete: 'cascade' }),
   tarih: text('tarih').notNull(),
   sonuc: text('sonuc', { enum: ['Başarılı', 'Başarısız', 'Katılmadı'] }).notNull(),
+  dosyaNo: text('dosya_no'),
   not: text('not'),
   driveFileId: text('drive_file_id'),
   driveWebViewLink: text('drive_web_view_link'),

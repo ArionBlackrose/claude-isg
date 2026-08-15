@@ -86,6 +86,7 @@ export default async function KayitEklePage() {
                   <TableHead>Personel</TableHead>
                   <TableHead>Eğitim</TableHead>
                   <TableHead>Sonuç</TableHead>
+                  <TableHead>Dosya No</TableHead>
                   <TableHead>Not</TableHead>
                 </TableRow>
               </TableHeader>
@@ -109,6 +110,7 @@ export default async function KayitEklePage() {
                       <TableCell>
                         <span className={`tag ${tagForSonuc(r.sonuc)}`}>{r.sonuc}</span>
                       </TableCell>
+                      <TableCell className="text-muted-foreground">{r.dosyaNo || '-'}</TableCell>
                       <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
                     </TableRow>
                   );
