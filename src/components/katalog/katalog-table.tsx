@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -50,6 +50,17 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
     egitimSuresi: '0',
   });
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLocaleLowerCase('tr-TR');
+    if (!q) return rows;
+    return rows.filter(
+      (row) =>
+        row.ad.toLocaleLowerCase('tr-TR').includes(q) ||
+        row.kategori.toLocaleLowerCase('tr-TR').includes(q),
+    );
+  }, [rows, search]);
 
   function startEdit(row: KatalogRow) {
     setEditingId(row.id);
@@ -102,134 +113,150 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
   }
 
   return (
-    <Table containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border">
-      <TableHeader>
-        <TableRow>
-          <TableHead>Eğitim Adı</TableHead>
-          <TableHead>Kategori</TableHead>
-          <TableHead>Geçerlilik (Ay)</TableHead>
-          <TableHead>Süre (Saat)</TableHead>
-          <TableHead>Kayıt Sayısı</TableHead>
-          <TableHead>Durum</TableHead>
-          {isAdmin && <TableHead />}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => {
-          const isEditing = editingId === row.id;
-          const isPending = pendingId === row.id;
-          if (isEditing) {
-            return (
-              <TableRow key={row.id}>
-                <TableCell>
-                  <Input
-                    value={draft.ad}
-                    onChange={(e) => setDraft((d) => ({ ...d, ad: e.target.value }))}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Select
-                    value={draft.kategori}
-                    onValueChange={(v) =>
-                      setDraft((d) => ({
-                        ...d,
-                        kategori: (v as TrainingInput['kategori']) ?? d.kategori,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TRAINING_CATEGORIES.map((kategori) => (
-                        <SelectItem key={kategori} value={kategori}>
-                          {kategori}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    min={0}
-                    className="w-24"
-                    value={draft.gecerlilikAy}
-                    onChange={(e) => setDraft((d) => ({ ...d, gecerlilikAy: e.target.value }))}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    min={0}
-                    className="w-24"
-                    value={draft.egitimSuresi}
-                    onChange={(e) => setDraft((d) => ({ ...d, egitimSuresi: e.target.value }))}
-                  />
-                </TableCell>
-                <TableCell className="font-mono text-muted-foreground">{row.recordCount}</TableCell>
-                <TableCell className="text-muted-foreground">-</TableCell>
-                <TableCell className="space-x-2 whitespace-nowrap">
-                  <Button size="sm" disabled={isPending} onClick={() => saveEdit(row.id)}>
-                    Kaydet
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
-                    İptal
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          }
-          return (
-            <TableRow key={row.id}>
-              <TableCell>{row.ad}</TableCell>
-              <TableCell className="text-muted-foreground">{row.kategori || '-'}</TableCell>
-              <TableCell>{row.gecerlilikAy ? `${row.gecerlilikAy} ay` : 'Süresiz'}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {row.egitimSuresi ? `${row.egitimSuresi} saat` : '-'}
-              </TableCell>
-              <TableCell className="font-mono">{row.recordCount}</TableCell>
-              <TableCell className="space-x-2.5 text-xs whitespace-nowrap">
-                {row.expiredCount > 0 && (
-                  <Link
-                    href={`/rapor?egitim=${row.id}&durum=expired`}
-                    className="text-danger hover:underline"
-                  >
-                    {row.expiredCount} süresi doldu
-                  </Link>
-                )}
-                {row.soonCount > 0 && (
-                  <Link
-                    href={`/rapor?egitim=${row.id}&durum=soon`}
-                    className="text-primary hover:underline"
-                  >
-                    {row.soonCount} yaklaşıyor
-                  </Link>
-                )}
-                {!row.expiredCount && !row.soonCount && (
-                  <span className="text-muted-foreground">-</span>
-                )}
-              </TableCell>
-              {isAdmin && (
-                <TableCell className="space-x-2 whitespace-nowrap">
-                  <Button size="sm" variant="outline" onClick={() => startEdit(row)}>
-                    Düzenle
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-danger text-danger hover:bg-danger/10"
-                    disabled={isPending}
-                    onClick={() => handleDelete(row)}
-                  >
-                    Sil
-                  </Button>
-                </TableCell>
-              )}
+    <div className="space-y-3">
+      <Input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Eğitim adı veya kategoriyle arayın..."
+        className="max-w-sm"
+      />
+      {filteredRows.length === 0 ? (
+        <div className="rounded-lg border border-border p-10 text-center text-muted-foreground">
+          Sonuç bulunamadı.
+        </div>
+      ) : (
+        <Table containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Eğitim Adı</TableHead>
+              <TableHead>Kategori</TableHead>
+              <TableHead>Geçerlilik (Ay)</TableHead>
+              <TableHead>Süre (Saat)</TableHead>
+              <TableHead>Kayıt Sayısı</TableHead>
+              <TableHead>Durum</TableHead>
+              {isAdmin && <TableHead />}
             </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+          </TableHeader>
+          <TableBody>
+            {filteredRows.map((row) => {
+              const isEditing = editingId === row.id;
+              const isPending = pendingId === row.id;
+              if (isEditing) {
+                return (
+                  <TableRow key={row.id}>
+                    <TableCell>
+                      <Input
+                        value={draft.ad}
+                        onChange={(e) => setDraft((d) => ({ ...d, ad: e.target.value }))}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={draft.kategori}
+                        onValueChange={(v) =>
+                          setDraft((d) => ({
+                            ...d,
+                            kategori: (v as TrainingInput['kategori']) ?? d.kategori,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TRAINING_CATEGORIES.map((kategori) => (
+                            <SelectItem key={kategori} value={kategori}>
+                              {kategori}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="w-24"
+                        value={draft.gecerlilikAy}
+                        onChange={(e) => setDraft((d) => ({ ...d, gecerlilikAy: e.target.value }))}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="w-24"
+                        value={draft.egitimSuresi}
+                        onChange={(e) => setDraft((d) => ({ ...d, egitimSuresi: e.target.value }))}
+                      />
+                    </TableCell>
+                    <TableCell className="font-mono text-muted-foreground">
+                      {row.recordCount}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">-</TableCell>
+                    <TableCell className="space-x-2 whitespace-nowrap">
+                      <Button size="sm" disabled={isPending} onClick={() => saveEdit(row.id)}>
+                        Kaydet
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
+                        İptal
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              }
+              return (
+                <TableRow key={row.id}>
+                  <TableCell>{row.ad}</TableCell>
+                  <TableCell className="text-muted-foreground">{row.kategori || '-'}</TableCell>
+                  <TableCell>{row.gecerlilikAy ? `${row.gecerlilikAy} ay` : 'Süresiz'}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {row.egitimSuresi ? `${row.egitimSuresi} saat` : '-'}
+                  </TableCell>
+                  <TableCell className="font-mono">{row.recordCount}</TableCell>
+                  <TableCell className="space-x-2.5 text-xs whitespace-nowrap">
+                    {row.expiredCount > 0 && (
+                      <Link
+                        href={`/rapor?egitim=${row.id}&durum=expired`}
+                        className="text-danger hover:underline"
+                      >
+                        {row.expiredCount} süresi doldu
+                      </Link>
+                    )}
+                    {row.soonCount > 0 && (
+                      <Link
+                        href={`/rapor?egitim=${row.id}&durum=soon`}
+                        className="text-primary hover:underline"
+                      >
+                        {row.soonCount} yaklaşıyor
+                      </Link>
+                    )}
+                    {!row.expiredCount && !row.soonCount && (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="space-x-2 whitespace-nowrap">
+                      <Button size="sm" variant="outline" onClick={() => startEdit(row)}>
+                        Düzenle
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-danger text-danger hover:bg-danger/10"
+                        disabled={isPending}
+                        onClick={() => handleDelete(row)}
+                      >
+                        Sil
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      )}
+    </div>
   );
 }
