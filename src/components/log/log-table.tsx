@@ -175,10 +175,16 @@ export function LogTable({
       if (calismaSekliFilter !== 'all' && p.calismaSekli !== calismaSekliFilter) return false;
       if (q && !`${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleLowerCase('tr-TR').includes(q))
         return false;
-      if (egitimDurumFilter !== 'all') {
-        const matches = visibleTrainings.some(
-          (t) => getStatus(p.id, t.id, t).code === egitimDurumFilter,
-        );
+      // Eğitim durumu açıkça seçilmişse o duruma tam eşleşme aranır (ör.
+      // "Almadı" seçilirse eğitimi almayanlar listelenir). Durum seçilmemiş
+      // ama bir kategori/eğitim seçilmişse, varsayılan olarak sadece o
+      // eğitimi/kategoriyi ALMIŞ kişiler listelenir — aksi halde herkes
+      // (alan/almayan) görünüyordu.
+      if (kategoriFilter !== 'all' || egitimFilter !== 'all' || egitimDurumFilter !== 'all') {
+        const matches = visibleTrainings.some((t) => {
+          const code = getStatus(p.id, t.id, t).code;
+          return egitimDurumFilter !== 'all' ? code === egitimDurumFilter : code !== 'none';
+        });
         if (!matches) return false;
       }
       if (tarihBaslangic || tarihBitis) {
@@ -200,6 +206,8 @@ export function LogTable({
     durumFilter,
     firmaFilter,
     calismaSekliFilter,
+    kategoriFilter,
+    egitimFilter,
     egitimDurumFilter,
     tarihBaslangic,
     tarihBitis,
