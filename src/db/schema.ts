@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
 import { user } from './auth-schema';
 
 export * from './auth-schema';
@@ -61,7 +61,7 @@ export const auditLog = sqliteTable(
     userName: text('user_name').notNull(),
     action: text('action', { enum: ['create', 'update', 'delete'] }).notNull(),
     entityType: text('entity_type', {
-      enum: ['personel', 'egitim', 'kayit', 'kullanici'],
+      enum: ['personel', 'egitim', 'kayit', 'kullanici', 'proje'],
     }).notNull(),
     entityId: text('entity_id'),
     entityLabel: text('entity_label').notNull(),
@@ -74,6 +74,23 @@ export const auditLog = sqliteTable(
     index('audit_log_user_id_idx').on(table.userId),
     index('audit_log_created_at_idx').on(table.createdAt),
   ],
+);
+
+/** Tek satırlık (singleton) proje bilgisi kaydı — id her zaman 'default'. */
+export const projectSettings = sqliteTable(
+  'project_settings',
+  {
+    id: text('id').primaryKey().default('default'),
+    projeAdi: text('proje_adi'),
+    aciklama: text('aciklama'),
+    baslangicTarihi: text('baslangic_tarihi'),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  // Tek satırlık (singleton) tablo: id her zaman 'default' olmak zorunda,
+  // böylece yanlışlıkla ikinci bir satır eklenemez.
+  (table) => [check('project_settings_singleton', sql`${table.id} = 'default'`)],
 );
 
 export const trainingRecord = sqliteTable('training_record', {

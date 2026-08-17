@@ -22,14 +22,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { deleteRecord, updateRecord } from '@/actions/records';
+import { fmtDate } from '@/lib/training-status';
 import type { PersonelRow } from './personel-table';
-
-function fmtDate(d: string | null) {
-  if (!d) return '-';
-  const [y, m, day] = d.split('-');
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
-}
 
 function tagForSonuc(sonuc: string) {
   if (sonuc === 'Başarılı') return 'tag-ok';
@@ -108,45 +102,56 @@ export function PersonelDetayDialog({
             <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               Firma / Görev Geçmişi
             </h3>
-            {!personnel.history.length ? (
-              <p className="text-sm text-muted-foreground">Geçmiş dönem kaydı yok.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Firma</TableHead>
-                    <TableHead>Görev</TableHead>
-                    <TableHead>Çalışma Şekli</TableHead>
-                    <TableHead>Giriş</TableHead>
-                    <TableHead>Çıkış</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {personnel.history
-                    .slice()
-                    .reverse()
-                    .map((h, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{h.firma || '-'}</TableCell>
-                        <TableCell className="text-muted-foreground">{h.gorev || '-'}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {h.calismaSekli || '-'}
-                        </TableCell>
-                        <TableCell className="font-mono text-muted-foreground">
-                          {fmtDate(h.girisTarihi)}
-                        </TableCell>
-                        <TableCell className="font-mono text-muted-foreground">
-                          {fmtDate(h.cikisTarihi)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            )}
-            <p className="mt-1 text-right text-[11px] text-muted-foreground">
-              Firma: <b>{personnel.firma || '-'}</b> · Görev: <b>{personnel.gorev || '-'}</b> ·
-              Durum: <b>{personnel.durum}</b>
-            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Firma</TableHead>
+                  <TableHead>Görev</TableHead>
+                  <TableHead>Çalışma Şekli</TableHead>
+                  <TableHead>Giriş</TableHead>
+                  <TableHead>Çıkış</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-semibold">{personnel.firma || '-'}</TableCell>
+                  <TableCell className="font-semibold text-muted-foreground">
+                    {personnel.gorev || '-'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {personnel.calismaSekli || '-'}
+                  </TableCell>
+                  <TableCell className="font-mono text-muted-foreground">
+                    {fmtDate(personnel.iseGirisTarihi)}
+                  </TableCell>
+                  <TableCell className="font-mono">
+                    {personnel.durum === 'Güncel' ? (
+                      <span className="tag tag-ok">Güncel</span>
+                    ) : (
+                      fmtDate(personnel.cikisTarihi)
+                    )}
+                  </TableCell>
+                </TableRow>
+                {personnel.history
+                  .slice()
+                  .sort((a, b) => (b.cikisTarihi ?? '').localeCompare(a.cikisTarihi ?? ''))
+                  .map((h, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{h.firma || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{h.gorev || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {h.calismaSekli || '-'}
+                      </TableCell>
+                      <TableCell className="font-mono text-muted-foreground">
+                        {fmtDate(h.girisTarihi)}
+                      </TableCell>
+                      <TableCell className="font-mono text-muted-foreground">
+                        {fmtDate(h.cikisTarihi)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
           </section>
 
           <section>

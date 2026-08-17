@@ -56,8 +56,8 @@ export function UserTable({
   }
 
   return (
-    <div className="max-h-[520px] overflow-auto rounded-lg border border-border">
-      <Table>
+    <>
+      <Table containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border">
         <TableHeader>
           <TableRow>
             <TableHead>Ad Soyad</TableHead>
@@ -109,6 +109,6 @@ export function UserTable({
           }}
         />
       )}
-    </div>
+    </>
   );
 }

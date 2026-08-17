@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { deletePersonnel } from '@/actions/personnel';
+import { fmtDate } from '@/lib/training-status';
 import { PersonelEditDialog } from './personel-edit-dialog';
 import { PersonelDetayDialog } from './personel-detay-dialog';
 
@@ -34,6 +35,7 @@ export type PersonelRow = {
   calismaSekli: string | null;
   dogumTarihi: string | null;
   iseGirisTarihi: string | null;
+  cikisTarihi: string | null;
   durum: 'Güncel' | 'Çıkış';
   history: {
     firma: string | null;
@@ -60,13 +62,6 @@ const DURUM_FILTER_LABELS: Record<string, string> = {
   Güncel: 'Güncel',
   Çıkış: 'Çıkış',
 };
-
-function fmtDate(d: string | null) {
-  if (!d) return '-';
-  const [y, m, day] = d.split('-');
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
-}
 
 export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin: boolean }) {
   const router = useRouter();
@@ -130,74 +125,70 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
       {!filtered.length ? (
         <div className="p-10 text-center text-muted-foreground">Personel bulunamadı.</div>
       ) : (
-        <div className="max-h-[520px] overflow-auto rounded-lg border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ad Soyad</TableHead>
-                <TableHead>TC No</TableHead>
-                <TableHead>Görev</TableHead>
-                <TableHead>Firma</TableHead>
-                <TableHead>Çalışma Şekli</TableHead>
-                <TableHead>Doğum Tarihi</TableHead>
-                <TableHead>İşe Giriş</TableHead>
-                <TableHead>Durum</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((p) => (
-                <Fragment key={p.id}>
-                  <TableRow>
-                    <TableCell>
-                      <button
-                        type="button"
-                        className="text-left text-primary hover:underline"
-                        onClick={() => setDetayPersonelId(p.id)}
-                        title="Tüm verileri görüntüle"
+        <Table containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Ad Soyad</TableHead>
+              <TableHead>TC No</TableHead>
+              <TableHead>Görev</TableHead>
+              <TableHead>Firma</TableHead>
+              <TableHead>Çalışma Şekli</TableHead>
+              <TableHead>Doğum Tarihi</TableHead>
+              <TableHead>İşe Giriş</TableHead>
+              <TableHead>Durum</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((p) => (
+              <Fragment key={p.id}>
+                <TableRow>
+                  <TableCell>
+                    <button
+                      type="button"
+                      className="text-left text-primary hover:underline"
+                      onClick={() => setDetayPersonelId(p.id)}
+                      title="Tüm verileri görüntüle"
+                    >
+                      {p.ad} {p.soyad}
+                    </button>
+                  </TableCell>
+                  <TableCell className="font-mono text-muted-foreground">{p.tcNo || '-'}</TableCell>
+                  <TableCell>{p.gorev || '-'}</TableCell>
+                  <TableCell>{p.firma || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">{p.calismaSekli || '-'}</TableCell>
+                  <TableCell className="font-mono text-muted-foreground">
+                    {fmtDate(p.dogumTarihi)}
+                  </TableCell>
+                  <TableCell className="font-mono text-muted-foreground">
+                    {fmtDate(p.iseGirisTarihi)}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
+                      {p.durum}
+                    </span>
+                  </TableCell>
+                  <TableCell className="space-x-2 whitespace-nowrap">
+                    <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
+                      Düzenle
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-danger text-danger hover:bg-danger/10"
+                        disabled={pendingDeleteId === p.id}
+                        onClick={() => handleDelete(p)}
                       >
-                        {p.ad} {p.soyad}
-                      </button>
-                    </TableCell>
-                    <TableCell className="font-mono text-muted-foreground">
-                      {p.tcNo || '-'}
-                    </TableCell>
-                    <TableCell>{p.gorev || '-'}</TableCell>
-                    <TableCell>{p.firma || '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.calismaSekli || '-'}</TableCell>
-                    <TableCell className="font-mono text-muted-foreground">
-                      {fmtDate(p.dogumTarihi)}
-                    </TableCell>
-                    <TableCell className="font-mono text-muted-foreground">
-                      {fmtDate(p.iseGirisTarihi)}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                        {p.durum}
-                      </span>
-                    </TableCell>
-                    <TableCell className="space-x-2 whitespace-nowrap">
-                      <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
-                        Düzenle
+                        Sil
                       </Button>
-                      {isAdmin && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-danger text-danger hover:bg-danger/10"
-                          disabled={pendingDeleteId === p.id}
-                          onClick={() => handleDelete(p)}
-                        >
-                          Sil
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                </Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              </Fragment>
+            ))}
+          </TableBody>
+        </Table>
       )}
       {editingPersonel && (
         <PersonelEditDialog

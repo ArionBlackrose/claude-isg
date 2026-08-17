@@ -11,12 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-function fmtDate(d: string) {
-  const [y, m, day] = d.split('-');
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
-}
+import { fmtDate } from '@/lib/training-status';
 
 function tagForSonuc(sonuc: string) {
   if (sonuc === 'Başarılı') return 'tag-ok';
@@ -78,46 +73,44 @@ export default async function KayitEklePage() {
             Henüz kayıt yok. Yukarıdan ilk kaydı ekleyin.
           </div>
         ) : (
-          <div className="max-h-[420px] overflow-auto rounded-lg border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tarih</TableHead>
-                  <TableHead>Personel</TableHead>
-                  <TableHead>Eğitim</TableHead>
-                  <TableHead>Sonuç</TableHead>
-                  <TableHead>Dosya No</TableHead>
-                  <TableHead>Not</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentRecords.map((r) => {
-                  const p = allPersonnelMap.get(r.personnelId);
-                  const t = trainingMap.get(r.trainingId);
-                  return (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-mono">{fmtDate(r.tarih)}</TableCell>
-                      <TableCell>
-                        {p ? (
-                          `${p.ad} ${p.soyad}`
-                        ) : (
-                          <span className="text-muted-foreground">silinmiş</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {t ? t.ad : <span className="text-muted-foreground">silinmiş</span>}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`tag ${tagForSonuc(r.sonuc)}`}>{r.sonuc}</span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{r.dosyaNo || '-'}</TableCell>
-                      <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <Table containerClassName="max-h-[420px] overflow-auto rounded-lg border border-border">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tarih</TableHead>
+                <TableHead>Personel</TableHead>
+                <TableHead>Eğitim</TableHead>
+                <TableHead>Sonuç</TableHead>
+                <TableHead>Dosya No</TableHead>
+                <TableHead>Not</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentRecords.map((r) => {
+                const p = allPersonnelMap.get(r.personnelId);
+                const t = trainingMap.get(r.trainingId);
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-mono">{fmtDate(r.tarih)}</TableCell>
+                    <TableCell>
+                      {p ? (
+                        `${p.ad} ${p.soyad}`
+                      ) : (
+                        <span className="text-muted-foreground">silinmiş</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {t ? t.ad : <span className="text-muted-foreground">silinmiş</span>}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`tag ${tagForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{r.dosyaNo || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
       </div>
     </div>

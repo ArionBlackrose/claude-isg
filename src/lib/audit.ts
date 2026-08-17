@@ -2,7 +2,7 @@ import { db } from '@/db';
 import { auditLog } from '@/db/schema';
 
 export type AuditAction = 'create' | 'update' | 'delete';
-export type AuditEntityType = 'personel' | 'egitim' | 'kayit' | 'kullanici';
+export type AuditEntityType = 'personel' | 'egitim' | 'kayit' | 'kullanici' | 'proje';
 
 type ActorSession = { user: { id: string; name: string } };
 

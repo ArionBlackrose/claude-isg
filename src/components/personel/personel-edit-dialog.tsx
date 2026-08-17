@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -30,6 +31,7 @@ export function PersonelEditDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const [previousCikisTarihi, setPreviousCikisTarihi] = useState('');
   const {
     register,
     handleSubmit,
@@ -51,8 +53,25 @@ export function PersonelEditDialog({
     },
   });
 
+  const firmaChanged = (watch('firma') || '') !== (personnel.firma ?? '');
+  const firmaChangedRef = useRef(firmaChanged);
+
+  // Firma değiştirildiğinde İşe Giriş Tarihi'nin eski firmadan kalma
+  // değerle sessizce kaydedilmesini önlemek için alan boşaltılır; kullanıcı
+  // yeni firmaya giriş tarihini elle girmek zorunda kalır. Firma alanı
+  // orijinal değerine geri alınırsa orijinal tarih geri yüklenir.
+  useEffect(() => {
+    if (firmaChanged === firmaChangedRef.current) return;
+    firmaChangedRef.current = firmaChanged;
+    setValue('iseGirisTarihi', firmaChanged ? '' : (personnel.iseGirisTarihi ?? ''));
+  }, [firmaChanged, personnel.iseGirisTarihi, setValue]);
+
   async function onSubmit(values: PersonnelOutput) {
-    const result = await updatePersonnel(personnel.id, values);
+    if (firmaChanged && !values.iseGirisTarihi) {
+      toast.error('Firma değişikliği yapıldığında İşe Giriş Tarihi girilmesi zorunludur.');
+      return;
+    }
+    const result = await updatePersonnel(personnel.id, { ...values, previousCikisTarihi });
     if (!result.ok) {
       toast.error(result.error);
       return;
@@ -103,6 +122,20 @@ export function PersonelEditDialog({
               <Input id="edit-firma" maxLength={100} {...register('firma')} />
               {errors.firma && <p className="text-xs text-danger">{errors.firma.message}</p>}
             </div>
+            {firmaChanged && (
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-previousCikisTarihi">
+                  Önceki Firmadan Çıkış Tarihi (opsiyonel)
+                </Label>
+                <Input
+                  id="edit-previousCikisTarihi"
+                  type="date"
+                  max={todayStr()}
+                  value={previousCikisTarihi}
+                  onChange={(e) => setPreviousCikisTarihi(e.target.value)}
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="edit-dogumTarihi">Doğum Tarihi</Label>
               <Input
@@ -116,7 +149,9 @@ export function PersonelEditDialog({
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="edit-iseGirisTarihi">İşe Giriş Tarihi</Label>
+              <Label htmlFor="edit-iseGirisTarihi">
+                İşe Giriş Tarihi{firmaChanged && <span className="text-danger"> *</span>}
+              </Label>
               <Input
                 id="edit-iseGirisTarihi"
                 type="date"

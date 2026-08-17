@@ -181,3 +181,17 @@
     color: var(--danger);
   }
 }
+
+/* Uyarı mesajları (toast) sayfanın tam ortasında gösterilir. */
+[data-sonner-toaster][data-y-position='top'][data-x-position='center'] {
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+@media (max-width: 600px) {
+  [data-sonner-toaster][data-y-position='top'][data-x-position='center'] {
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, -50%) !important;
+  }
+}

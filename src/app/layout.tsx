@@ -34,7 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     >
       <body className="min-h-screen bg-background font-sans text-foreground">
         {children}
-        <Toaster richColors position="top-right" theme="dark" />
+        <Toaster richColors position="top-center" theme="dark" />
       </body>
     </html>
   );

@@ -18,13 +18,17 @@ export type TrainingStatus = {
   tarih: string | null;
 };
 
+/** Verilen yıl/ay (1-12) için ayın kaç gün çektiğini döner. */
+export function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
 export function addMonths(dateStr: string, months: number): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const totalMonths = year * 12 + (month - 1) + months;
   const targetYear = Math.floor(totalMonths / 12);
   const targetMonthIndex = ((totalMonths % 12) + 12) % 12;
-  const daysInTargetMonth = new Date(Date.UTC(targetYear, targetMonthIndex + 1, 0)).getUTCDate();
-  const targetDay = Math.min(day, daysInTargetMonth);
+  const targetDay = Math.min(day, daysInMonth(targetYear, targetMonthIndex + 1));
   const mm = String(targetMonthIndex + 1).padStart(2, '0');
   const dd = String(targetDay).padStart(2, '0');
   return `${targetYear}-${mm}-${dd}`;
@@ -38,6 +42,14 @@ const istanbulDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Euro
 
 export function todayStr(): string {
   return istanbulDateFormatter.format(new Date());
+}
+
+/** "YYYY-MM-DD" formatındaki bir tarihi "GG.AA.YYYY" olarak biçimlendirir. */
+export function fmtDate(d: string | null | undefined): string {
+  if (!d) return '-';
+  const [y, m, day] = d.split('-');
+  if (!y || !m || !day) return d;
+  return `${day}.${m}.${y}`;
 }
 
 /** Bir personelin bir eğitimdeki güncel durumunu, en son "Başarılı" kayıt ve

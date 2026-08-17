@@ -14,18 +14,17 @@ const TABS = [
 
 export function TabsNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
-  const tabs = isAdmin
-    ? [
-        ...TABS,
-        { href: '/admin/kullanicilar', label: 'Kullanıcılar' },
-        { href: '/admin/aktivite', label: 'Aktivite' },
-      ]
-    : TABS;
+  const tabs = isAdmin ? [...TABS, { href: '/admin', label: 'Admin Paneli' }] : TABS;
 
   return (
     <nav className="mb-6 flex flex-wrap gap-1 border-b border-border">
       {tabs.map((tab) => {
-        const active = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href);
+        const active =
+          tab.href === '/'
+            ? pathname === '/'
+            : tab.href === '/admin'
+              ? pathname.startsWith('/admin')
+              : pathname.startsWith(tab.href);
         return (
           <Link
             key={tab.href}

@@ -75,36 +75,56 @@ export async function createRecords(input: unknown): Promise<RecordsBatchResult>
   const personnelIds = Array.from(new Set(parsed.data.personnelIds));
   const trainingIds = Array.from(new Set(parsed.data.trainingIds));
 
-  let created = 0;
-  for (const personnelId of personnelIds) {
-    for (const trainingId of trainingIds) {
-      const [inserted] = await db
-        .insert(trainingRecord)
-        .values({
-          personnelId,
-          trainingId,
-          tarih,
-          sonuc,
-          dosyaNo: dosyaNo || null,
-          not: not || null,
-          createdByUserId: session.user.id,
-        })
-        .returning();
-      created++;
-      const label = await recordLabel(personnelId, trainingId);
-      await logActivity(
-        session,
-        'create',
-        'kayit',
-        inserted.id,
-        label,
-        `Eğitim kaydı eklendi: ${tarih} — ${sonuc}.`,
-      );
-    }
+  const [personRows, trainingRows] = await Promise.all([
+    db.select().from(personnel),
+    db.select().from(training),
+  ]);
+  const personById = new Map(personRows.map((p) => [p.id, `${p.ad} ${p.soyad}`]));
+  const trainingById = new Map(trainingRows.map((t) => [t.id, t.ad]));
+
+  // better-sqlite3 sürücüsü senkron çalıştığı için db.transaction() içindeki
+  // callback async OLAMAZ; bu yüzden insert'ler .get() ile senkron olarak
+  // yapılır, tüm kombinasyonlar ya birlikte yazılır ya da hiçbiri yazılmaz.
+  const inserted: { id: string; personnelId: string; trainingId: string }[] = [];
+  try {
+    db.transaction((tx) => {
+      for (const personnelId of personnelIds) {
+        for (const trainingId of trainingIds) {
+          const row = tx
+            .insert(trainingRecord)
+            .values({
+              personnelId,
+              trainingId,
+              tarih,
+              sonuc,
+              dosyaNo: dosyaNo || null,
+              not: not || null,
+              createdByUserId: session.user.id,
+            })
+            .returning()
+            .get();
+          inserted.push({ id: row.id, personnelId, trainingId });
+        }
+      }
+    });
+  } catch {
+    return { ok: false, error: 'Kayıtlar oluşturulamadı. Hiçbir kayıt eklenmedi.' };
+  }
+
+  for (const row of inserted) {
+    const label = `${personById.get(row.personnelId) ?? 'bilinmeyen personel'} — ${trainingById.get(row.trainingId) ?? 'bilinmeyen eğitim'}`;
+    await logActivity(
+      session,
+      'create',
+      'kayit',
+      row.id,
+      label,
+      `Eğitim kaydı eklendi: ${tarih} — ${sonuc}.`,
+    );
   }
 
   revalidateRecordPaths();
-  return { ok: true, created };
+  return { ok: true, created: inserted.length };
 }
 
 export async function updateRecord(id: string, input: unknown): Promise<ActionResult> {
@@ -254,6 +274,7 @@ export async function importRecordsFromExcel(
     const egitimAdi = (row['EĞİTİM ADI'] ?? '').trim();
     const tarih = (row['TARİH'] ?? '').trim();
     const sonucRaw = (row['SONUÇ'] ?? '').trim();
+    const dosyaNo = (row['DOSYA NO'] ?? '').trim();
     const not = (row['NOT'] ?? '').trim();
 
     if (!egitimAdi || !tarih) {
@@ -282,6 +303,9 @@ export async function importRecordsFromExcel(
 
     let sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
     if (!sonucRaw) {
+      // SONUÇ sütunu boş bırakılan satırlar kasıtlı olarak "Başarılı" kabul
+      // edilir (eski Excel şablonlarında bu sütun hiç yoktu); geçersiz bir
+      // değer girildiyse (aşağıdaki else dalı) satır atlanır.
       sonuc = 'Başarılı';
     } else if (VALID_SONUC.has(sonucRaw)) {
       sonuc = sonucRaw as 'Başarılı' | 'Başarısız' | 'Katılmadı';
@@ -295,6 +319,7 @@ export async function importRecordsFromExcel(
       trainingId: trainingMatch.id,
       tarih,
       sonuc,
+      dosyaNo: dosyaNo || null,
       not: not || null,
       createdByUserId: session.user.id,
     });

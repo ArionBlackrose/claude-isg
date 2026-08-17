@@ -7,7 +7,15 @@ import { Button } from '@/components/ui/button';
 import { importRecordsFromExcel, type RecordImportSkip } from '@/actions/records';
 import { downloadWorkbook, parseExcelFile, todayFileStamp } from '@/lib/excel';
 
-const TEMPLATE_HEADERS = ['TC KİMLİK NO', 'AD SOYAD', 'EĞİTİM ADI', 'TARİH', 'SONUÇ', 'NOT'];
+const TEMPLATE_HEADERS = [
+  'TC KİMLİK NO',
+  'AD SOYAD',
+  'EĞİTİM ADI',
+  'TARİH',
+  'SONUÇ',
+  'DOSYA NO',
+  'NOT',
+];
 
 export function ExcelImportKayit() {
   const router = useRouter();
@@ -20,7 +28,7 @@ export function ExcelImportKayit() {
     downloadWorkbook(
       [
         TEMPLATE_HEADERS,
-        ['12345678901', 'Ahmet Yılmaz', 'İSG Temel Eğitimi', '2026-01-15', 'Başarılı', ''],
+        ['12345678901', 'Ahmet Yılmaz', 'İSG Temel Eğitimi', '2026-01-15', 'Başarılı', '', ''],
       ],
       'Kayıtlar',
       `egitim-kaydi-sablon-${todayFileStamp()}.xlsx`,
@@ -61,10 +69,10 @@ export function ExcelImportKayit() {
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
         Sütunlar: <b>TC Kimlik No</b> (veya Ad Soyad), <b>Eğitim Adı</b>, <b>Tarih</b>, <b>Sonuç</b>{' '}
-        (Başarılı/Başarısız/Katılmadı, boşsa Başarılı sayılır), <b>Not</b> (opsiyonel). Personel TC
-        Kimlik No veya Ad Soyad ile eşleştirilir — eşleşmezse satır atlanır. Eğitim
-        Kataloğu&apos;nda olmayan eğitim adları otomatik olarak yeni bir eğitim türü olarak
-        oluşturulur.
+        (Başarılı/Başarısız/Katılmadı, boşsa Başarılı sayılır), <b>Dosya No</b> (opsiyonel),{' '}
+        <b>Not</b> (opsiyonel). Personel TC Kimlik No veya Ad Soyad ile eşleştirilir — eşleşmezse
+        satır atlanır. Eğitim Kataloğu&apos;nda olmayan eğitim adları otomatik olarak yeni bir
+        eğitim türü olarak oluşturulur.
       </p>
       <Button type="button" variant="outline" size="sm" onClick={handleTemplateDownload}>
         Şablon İndir (.xlsx)

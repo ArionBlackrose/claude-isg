@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -18,8 +18,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { statusFor, type TrainingStatusCode } from '@/lib/training-status';
+import {
+  addMonths,
+  daysBetween,
+  todayStr,
+  fmtDate,
+  type TrainingStatusCode,
+} from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
+import { TRAINING_CATEGORIES } from '@/schemas/training';
 import { KayitEditDialog } from './kayit-edit-dialog';
 
 export type LogPersonel = {
@@ -32,7 +39,7 @@ export type LogPersonel = {
   calismaSekli: string | null;
   durum: 'Güncel' | 'Çıkış';
 };
-export type LogTraining = { id: string; ad: string; gecerlilikAy: number };
+export type LogTraining = { id: string; ad: string; kategori: string; gecerlilikAy: number };
 export type LogRecord = {
   id: string;
   personnelId: string;
@@ -61,12 +68,6 @@ const EGITIM_DURUM_LABELS = Object.fromEntries(EGITIM_DURUM_OPTIONS.map((o) => [
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
-function fmtDate(d: string) {
-  const [y, m, day] = d.split('-');
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
-}
-
 function tagClassFor(code: TrainingStatusCode) {
   if (code === 'expired') return 'tag-bad';
   if (code === 'soon') return 'tag-warn';
@@ -89,8 +90,11 @@ export function LogTable({
   const [durumFilter, setDurumFilter] = useState('all');
   const [firmaFilter, setFirmaFilter] = useState('all');
   const [calismaSekliFilter, setCalismaSekliFilter] = useState('all');
+  const [kategoriFilter, setKategoriFilter] = useState('all');
   const [egitimFilter, setEgitimFilter] = useState('all');
   const [egitimDurumFilter, setEgitimDurumFilter] = useState('all');
+  const [tarihBaslangic, setTarihBaslangic] = useState('');
+  const [tarihBitis, setTarihBitis] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const [editing, setEditing] = useState<{ personnelId: string; trainingId: string } | null>(null);
@@ -112,6 +116,50 @@ export function LogTable({
     [egitimOptions],
   );
 
+  /** Kategori ve/veya belirli bir eğitim seçimine göre tabloda gösterilecek
+   * (ve dışa aktarılacak) eğitim sütunları. */
+  const visibleTrainings = useMemo(() => {
+    let list = trainings;
+    if (kategoriFilter !== 'all') list = list.filter((t) => t.kategori === kategoriFilter);
+    if (egitimFilter !== 'all') list = list.filter((t) => t.id === egitimFilter);
+    return list;
+  }, [trainings, kategoriFilter, egitimFilter]);
+
+  // records'ı personel×eğitim anahtarına göre bir kez gruplayıp önbellekler;
+  // statusFor'un her çağrıda tüm records dizisini taraması yerine render,
+  // filtre ve export arasında paylaşılan tek bir O(records) geçiş yapılır.
+  const successRecordsByKey = useMemo(() => {
+    const map = new Map<string, LogRecord[]>();
+    for (const r of records) {
+      if (r.sonuc !== 'Başarılı') continue;
+      const key = `${r.personnelId}|${r.trainingId}`;
+      const list = map.get(key);
+      if (list) list.push(r);
+      else map.set(key, [r]);
+    }
+    for (const list of map.values()) list.sort((a, b) => b.tarih.localeCompare(a.tarih));
+    return map;
+  }, [records]);
+  const getStatus = useCallback(
+    (personnelId: string, trainingId: string, training: LogTraining | undefined) => {
+      const successRecords = successRecordsByKey.get(`${personnelId}|${trainingId}`);
+      if (!successRecords?.length) {
+        return { code: 'none' as const, label: 'Almadı', tarih: null };
+      }
+      const last = successRecords[0];
+      if (!training || !training.gecerlilikAy) {
+        return { code: 'valid' as const, label: last.tarih, tarih: last.tarih };
+      }
+      const expiry = addMonths(last.tarih, training.gecerlilikAy);
+      const diff = daysBetween(todayStr(), expiry);
+      if (diff < 0) return { code: 'expired' as const, label: 'Süresi Doldu', tarih: last.tarih };
+      if (diff <= 30)
+        return { code: 'soon' as const, label: `Yaklaşıyor (${diff}g)`, tarih: last.tarih };
+      return { code: 'valid' as const, label: last.tarih, tarih: last.tarih };
+    },
+    [successRecordsByKey],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLocaleLowerCase('tr-TR');
     return personnel.filter((p) => {
@@ -121,12 +169,21 @@ export function LogTable({
       if (q && !`${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleLowerCase('tr-TR').includes(q))
         return false;
       if (egitimDurumFilter !== 'all') {
-        const egitimler =
-          egitimFilter === 'all' ? trainings : trainings.filter((t) => t.id === egitimFilter);
-        const matches = egitimler.some(
-          (t) => statusFor(p.id, t.id, records, t).code === egitimDurumFilter,
+        const matches = visibleTrainings.some(
+          (t) => getStatus(p.id, t.id, t).code === egitimDurumFilter,
         );
         if (!matches) return false;
+      }
+      if (tarihBaslangic || tarihBitis) {
+        const visibleIds = new Set(visibleTrainings.map((t) => t.id));
+        const hasRecordInRange = records.some(
+          (r) =>
+            r.personnelId === p.id &&
+            visibleIds.has(r.trainingId) &&
+            (!tarihBaslangic || r.tarih >= tarihBaslangic) &&
+            (!tarihBitis || r.tarih <= tarihBitis),
+        );
+        if (!hasRecordInRange) return false;
       }
       return true;
     });
@@ -136,10 +193,12 @@ export function LogTable({
     durumFilter,
     firmaFilter,
     calismaSekliFilter,
-    egitimFilter,
     egitimDurumFilter,
-    trainings,
+    tarihBaslangic,
+    tarihBitis,
+    visibleTrainings,
     records,
+    getStatus,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -154,8 +213,11 @@ export function LogTable({
   const handleDurumFilterChange = updateFilter(setDurumFilter);
   const handleFirmaFilterChange = updateFilter(setFirmaFilter);
   const handleCalismaSekliFilterChange = updateFilter(setCalismaSekliFilter);
+  const handleKategoriFilterChange = updateFilter(setKategoriFilter);
   const handleEgitimFilterChange = updateFilter(setEgitimFilter);
   const handleEgitimDurumFilterChange = updateFilter(setEgitimDurumFilter);
+  const handleTarihBaslangicChange = updateFilter(setTarihBaslangic);
+  const handleTarihBitisChange = updateFilter(setTarihBitis);
   const handlePageSizeChange = updateFilter(setPageSize);
 
   const paged = useMemo(() => {
@@ -175,7 +237,7 @@ export function LogTable({
       'Firması',
       'Çalışma Şekli',
       'Çalışma Durumu',
-      ...trainings.map((t) => t.ad),
+      ...visibleTrainings.map((t) => t.ad),
     ];
     const aoa: (string | number)[][] = [header];
     filtered.forEach((p, i) => {
@@ -188,8 +250,8 @@ export function LogTable({
         p.calismaSekli || '',
         p.durum,
       ];
-      const cols = trainings.map((t) => {
-        const s = statusFor(p.id, t.id, records, t);
+      const cols = visibleTrainings.map((t) => {
+        const s = getStatus(p.id, t.id, t);
         return s.tarih && s.code === 'valid' ? fmtDate(s.label) : s.label;
       });
       aoa.push([...base, ...cols]);
@@ -253,6 +315,22 @@ export function LogTable({
         </Select>
       </div>
       <div className="flex flex-wrap items-center gap-2.5">
+        <Select
+          value={kategoriFilter}
+          onValueChange={(v) => handleKategoriFilterChange(v ?? 'all')}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue>{(v: string) => (v === 'all' ? 'Tüm kategoriler' : v)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm kategoriler</SelectItem>
+            {TRAINING_CATEGORIES.map((k) => (
+              <SelectItem key={k} value={k}>
+                {k}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={egitimFilter} onValueChange={(v) => handleEgitimFilterChange(v ?? 'all')}>
           <SelectTrigger className="w-52">
             <SelectValue>{(v: string) => egitimLabels[v] ?? v}</SelectValue>
@@ -280,6 +358,23 @@ export function LogTable({
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="date"
+            value={tarihBaslangic}
+            onChange={(e) => handleTarihBaslangicChange(e.target.value)}
+            className="w-40"
+            aria-label="Tarih başlangıç"
+          />
+          <span className="text-xs text-muted-foreground">—</span>
+          <Input
+            type="date"
+            value={tarihBitis}
+            onChange={(e) => handleTarihBitisChange(e.target.value)}
+            className="w-40"
+            aria-label="Tarih bitiş"
+          />
+        </div>
         <Button type="button" variant="outline" size="sm" onClick={handleExport}>
           Excel İndir (Yedek)
         </Button>
@@ -289,64 +384,69 @@ export function LogTable({
         <div className="p-10 text-center text-muted-foreground">Kayıt bulunamadı.</div>
       ) : (
         <>
-          <div className="max-h-[560px] overflow-auto rounded-lg border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No</TableHead>
-                  <TableHead>TC Kimlik No</TableHead>
-                  <TableHead>Adı Soyadı</TableHead>
-                  <TableHead>Görevi</TableHead>
-                  <TableHead>Firması</TableHead>
-                  <TableHead>Çalışma Şekli</TableHead>
-                  <TableHead>Çalışma Durumu</TableHead>
-                  {trainings.map((t) => (
-                    <TableHead key={t.id}>{t.ad}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paged.map((p, i) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-mono text-muted-foreground">
-                      {(page - 1) * pageSize + i + 1}
-                    </TableCell>
-                    <TableCell className="font-mono">{p.tcNo || '-'}</TableCell>
-                    <TableCell>
-                      {p.ad} {p.soyad}
-                    </TableCell>
-                    <TableCell>{p.gorev || '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.firma || '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.calismaSekli || '-'}</TableCell>
-                    <TableCell>
-                      <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                        {p.durum}
-                      </span>
-                    </TableCell>
-                    {trainings.map((t) => {
-                      const s = statusFor(p.id, t.id, records, t);
-                      return (
-                        <TableCell key={t.id}>
-                          <button
-                            type="button"
-                            className={`tag ${tagClassFor(s.code)} cursor-pointer`}
-                            title={
-                              s.tarih
-                                ? `${fmtDate(s.tarih)} — düzenlemek için tıklayın`
-                                : 'düzenlemek için tıklayın'
-                            }
-                            onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
-                          >
-                            {s.code === 'valid' ? fmtDate(s.label) : s.label}
-                          </button>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
+          <Table
+            className="table-fixed"
+            containerClassName="max-h-[560px] overflow-auto rounded-lg border border-border"
+          >
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-14">No</TableHead>
+                <TableHead className="w-28">TC Kimlik No</TableHead>
+                <TableHead className="w-40">Adı Soyadı</TableHead>
+                <TableHead className="w-32">Görevi</TableHead>
+                <TableHead className="w-32">Firması</TableHead>
+                <TableHead className="w-28">Çalışma Şekli</TableHead>
+                <TableHead className="w-28">Çalışma Durumu</TableHead>
+                {visibleTrainings.map((t) => (
+                  <TableHead key={t.id} className="w-40 text-center">
+                    {t.ad}
+                  </TableHead>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paged.map((p, i) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-mono text-muted-foreground">
+                    {(page - 1) * pageSize + i + 1}
+                  </TableCell>
+                  <TableCell className="font-mono">{p.tcNo || '-'}</TableCell>
+                  <TableCell className="whitespace-normal">
+                    {p.ad} {p.soyad}
+                  </TableCell>
+                  <TableCell className="whitespace-normal">{p.gorev || '-'}</TableCell>
+                  <TableCell className="whitespace-normal text-muted-foreground">
+                    {p.firma || '-'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{p.calismaSekli || '-'}</TableCell>
+                  <TableCell>
+                    <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
+                      {p.durum}
+                    </span>
+                  </TableCell>
+                  {visibleTrainings.map((t) => {
+                    const s = getStatus(p.id, t.id, t);
+                    return (
+                      <TableCell key={t.id} className="w-40 text-center">
+                        <button
+                          type="button"
+                          className={`tag ${tagClassFor(s.code)} cursor-pointer`}
+                          title={
+                            s.tarih
+                              ? `${fmtDate(s.tarih)} — düzenlemek için tıklayın`
+                              : 'düzenlemek için tıklayın'
+                          }
+                          onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
+                        >
+                          {s.code === 'valid' ? fmtDate(s.label) : s.label}
+                        </button>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Sayfa başına:</span>

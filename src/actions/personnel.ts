@@ -60,6 +60,12 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
   }
+  const rawInput = input as Record<string, unknown>;
+  const previousCikisTarihi =
+    typeof rawInput.previousCikisTarihi === 'string'
+      ? rawInput.previousCikisTarihi.trim() || null
+      : null;
+
   const conflict = await findTcConflict(parsed.data.tcNo, id);
   if (conflict) {
     return {
@@ -79,20 +85,47 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
   const nextDurum = parsed.data.durum ?? existing.durum;
   const durumChangingToExit = existing.durum !== 'Çıkış' && nextDurum === 'Çıkış';
   const durumReactivating = existing.durum === 'Çıkış' && nextDurum === 'Güncel';
+  const firmaChanged = (existing.firma ?? null) !== nextFirma;
 
-  // Personel başka bir firmaya/göreve geçtiğinde ya da "Çıkış" olarak
-  // işaretlendiğinde önceki dönemi kaybetmemek için, Excel
-  // senkronizasyonundaki gibi mevcut değerleri geçmişe kaydet.
+  if (firmaChanged && !parsed.data.iseGirisTarihi) {
+    return {
+      ok: false,
+      error: 'Firma değişikliği yapıldığında İşe Giriş Tarihi girilmesi zorunludur.',
+    };
+  }
+
+  // Personel başka bir firmaya/göreve/çalışma şekline geçtiğinde ya da
+  // "Çıkış" olarak işaretlendiğinde önceki dönemi kaybetmemek için, Excel
+  // senkronizasyonundaki gibi mevcut değerleri geçmişe kaydet. Kayıtta
+  // daha önce hiç istihdam bilgisi girilmemişse (tamamen boş oluşturulup
+  // ilk kez dolduruluyorsa) gerçekte var olmamış bir "önceki dönem"
+  // oluşturmamak için geçmiş kaydı atlanır.
+  const hadEmploymentInfo =
+    existing.firma !== null || existing.gorev !== null || existing.calismaSekli !== null;
   const employmentChanged =
-    (existing.firma ?? null) !== nextFirma || (existing.gorev ?? null) !== nextGorev;
+    hadEmploymentInfo &&
+    ((existing.firma ?? null) !== nextFirma ||
+      (existing.gorev ?? null) !== nextGorev ||
+      (existing.calismaSekli ?? null) !== nextCalismaSekli);
   if (employmentChanged || durumChangingToExit) {
+    // Firma değişikliğinde önceki firmadan çıkış tarihi kullanıcıdan
+    // istenir (opsiyonel, girilmezse boş bırakılır); ancak durum aynı anda
+    // "Çıkış"a çevriliyorsa bu gerçek bir işten çıkış olduğu için tarih
+    // girilmediyse bugünün tarihine düşülür (boş bırakılmaz). Diğer
+    // durumlarda (sadece görev/çalışma şekli değişimi) bugünün tarihi
+    // kullanılır.
+    const historyCikisTarihi = durumChangingToExit
+      ? previousCikisTarihi || todayStr()
+      : firmaChanged
+        ? previousCikisTarihi
+        : todayStr();
     await db.insert(personnelHistory).values({
       personnelId: id,
       firma: existing.firma,
       gorev: existing.gorev,
       calismaSekli: existing.calismaSekli,
       girisTarihi: existing.iseGirisTarihi,
-      cikisTarihi: todayStr(),
+      cikisTarihi: historyCikisTarihi,
     });
   }
 
@@ -256,7 +289,18 @@ export async function syncPersonnelFromExcel(
           })
           .where(eq(personnel.id, match.id))
           .run();
-        if (resolvedTcNo) byTc.set(resolvedTcNo, { ...match, tcNo: resolvedTcNo });
+        const updatedMatch = {
+          ...match,
+          tcNo: resolvedTcNo,
+          firma: firma || match.firma,
+          gorev: gorev || match.gorev,
+          dogumTarihi: match.dogumTarihi || dogumTarihi || null,
+          iseGirisTarihi: match.iseGirisTarihi || iseGirisTarihi || null,
+          durum: 'Güncel' as const,
+          cikisTarihi: null,
+        };
+        if (resolvedTcNo) byTc.set(resolvedTcNo, updatedMatch);
+        byName.set(normName(adSoyad), updatedMatch);
         updated++;
       } else {
         const { ad, soyad } = splitName(adSoyad);

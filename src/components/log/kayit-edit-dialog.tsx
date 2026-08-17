@@ -105,6 +105,10 @@ export function KayitEditDialog({
       toast.error('Tarih zorunlu.');
       return;
     }
+    if (!newDosyaNo.trim()) {
+      toast.error('Dosya No zorunlu.');
+      return;
+    }
     setIsAdding(true);
     const result = await createRecord({
       personnelId,
@@ -262,12 +266,10 @@ export function KayitEditDialog({
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>Dosya No</Label>
-                <Input
-                  value={newDosyaNo}
-                  onChange={(e) => setNewDosyaNo(e.target.value)}
-                  placeholder="opsiyonel"
-                />
+                <Label>
+                  Dosya No<span className="text-danger"> *</span>
+                </Label>
+                <Input value={newDosyaNo} onChange={(e) => setNewDosyaNo(e.target.value)} />
               </div>
               <div className="space-y-1">
                 <Label>Not</Label>

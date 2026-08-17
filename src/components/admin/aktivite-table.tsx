@@ -23,7 +23,7 @@ export type AktiviteLog = {
   id: string;
   userName: string;
   action: 'create' | 'update' | 'delete';
-  entityType: 'personel' | 'egitim' | 'kayit' | 'kullanici';
+  entityType: 'personel' | 'egitim' | 'kayit' | 'kullanici' | 'proje';
   entityLabel: string;
   summary: string;
   createdAt: string;
@@ -46,6 +46,7 @@ const ENTITY_LABELS: Record<AktiviteLog['entityType'], string> = {
   egitim: 'Eğitim',
   kayit: 'Kayıt',
   kullanici: 'Kullanıcı',
+  proje: 'Proje',
 };
 
 const PAGE_SIZE = 25;
@@ -122,7 +123,7 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
         {!summary.length ? (
           <p className="text-sm text-muted-foreground">Henüz kayıtlı işlem yok.</p>
         ) : (
-          <Table>
+          <Table containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border">
             <TableHeader>
               <TableRow>
                 <TableHead>Kullanıcı</TableHead>
@@ -199,6 +200,7 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
               <SelectItem value="egitim">Eğitim</SelectItem>
               <SelectItem value="kayit">Kayıt</SelectItem>
               <SelectItem value="kullanici">Kullanıcı</SelectItem>
+              <SelectItem value="proje">Proje</SelectItem>
             </SelectContent>
           </Select>
           <span className="self-center text-xs text-muted-foreground">{filtered.length} kayıt</span>
@@ -208,40 +210,38 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
           <div className="p-10 text-center text-muted-foreground">Kayıt bulunamadı.</div>
         ) : (
           <>
-            <div className="max-h-[520px] overflow-auto rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tarih</TableHead>
-                    <TableHead>Kullanıcı</TableHead>
-                    <TableHead>İşlem</TableHead>
-                    <TableHead>Varlık Türü</TableHead>
-                    <TableHead>Varlık</TableHead>
-                    <TableHead>Özet</TableHead>
+            <Table containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tarih</TableHead>
+                  <TableHead>Kullanıcı</TableHead>
+                  <TableHead>İşlem</TableHead>
+                  <TableHead>Varlık Türü</TableHead>
+                  <TableHead>Varlık</TableHead>
+                  <TableHead>Özet</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paged.map((l) => (
+                  <TableRow key={l.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                      {fmtDateTime(l.createdAt)}
+                    </TableCell>
+                    <TableCell>{l.userName}</TableCell>
+                    <TableCell>
+                      <span className={`tag ${ACTION_TAG[l.action]}`}>
+                        {ACTION_LABELS[l.action]}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {ENTITY_LABELS[l.entityType]}
+                    </TableCell>
+                    <TableCell>{l.entityLabel}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{l.summary}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paged.map((l) => (
-                    <TableRow key={l.id}>
-                      <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
-                        {fmtDateTime(l.createdAt)}
-                      </TableCell>
-                      <TableCell>{l.userName}</TableCell>
-                      <TableCell>
-                        <span className={`tag ${ACTION_TAG[l.action]}`}>
-                          {ACTION_LABELS[l.action]}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {ENTITY_LABELS[l.entityType]}
-                      </TableCell>
-                      <TableCell>{l.entityLabel}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{l.summary}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
             <div className="mt-2.5 flex items-center justify-between gap-2.5">
               <span className="text-xs text-muted-foreground">
                 Sayfa {page} / {totalPages}

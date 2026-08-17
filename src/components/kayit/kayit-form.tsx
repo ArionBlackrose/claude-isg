@@ -88,6 +88,10 @@ export function KayitForm({
       toast.error('Lütfen en az bir personel, en az bir eğitim ve tarih seçin.');
       return;
     }
+    if (!dosyaNo.trim()) {
+      toast.error('Dosya No zorunlu.');
+      return;
+    }
     setIsSubmitting(true);
     const result = await createRecords({
       personnelIds: Array.from(personnelIds),
@@ -194,7 +198,9 @@ export function KayitForm({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Dosya No (opsiyonel)</Label>
+          <Label>
+            Dosya No<span className="text-danger"> *</span>
+          </Label>
           <Input
             value={dosyaNo}
             onChange={(e) => setDosyaNo(e.target.value)}
