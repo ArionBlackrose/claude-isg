@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
@@ -23,13 +24,18 @@ async function bypassSession() {
   };
 }
 
-export async function getSession() {
+// Aynı istek (sayfa/layout render zinciri) içinde birden fazla yerden
+// çağrılsa da (root layout, admin layout, sayfanın kendisi vb.) oturum
+// sorgusu sadece BİR kez çalışır — React'in istek-kapsamlı cache()'i ile
+// tekrar eden DB/cookie sorgularının önüne geçilir (menüler arası geçişte
+// gereksiz gecikmenin ana kaynağı buydu).
+export const getSession = cache(async () => {
   if (LOGIN_DISABLED_TEMPORARILY) {
     const bypassed = await bypassSession();
     if (bypassed) return bypassed as Awaited<ReturnType<typeof auth.api.getSession>>;
   }
   return auth.api.getSession({ headers: await headers() });
-}
+});
 
 export async function requireSession() {
   const session = await getSession();
