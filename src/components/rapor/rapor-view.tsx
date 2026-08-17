@@ -252,6 +252,12 @@ export function RaporView({
     adamSaatKategoriFilter !== 'all'
       ? (aralikEgitimByKategori.get(adamSaatKategoriFilter) ?? [])
       : [];
+  // Seçili kategoriye göre daralan oturum listesi — "Seçili Aralıktaki Eğitim
+  // Oturumları" tablosu da kategori seçimine uysun diye.
+  const aralikOturumlariGorunen =
+    adamSaatKategoriFilter === 'all'
+      ? aralikOturumlari
+      : aralikOturumlari.filter((s) => s.kategori === adamSaatKategoriFilter);
 
   function handleAdamSaatExport() {
     if (adamSaatKategoriFilter === 'all') {
@@ -711,85 +717,62 @@ export function RaporView({
               </section>
 
               <section>
-                <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  {adamSaatKategoriFilter === 'all'
-                    ? 'Kategori Bazında Adam-Saat'
-                    : `${adamSaatKategoriFilter} — Eğitim Bazında Adam-Saat`}
-                </h3>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                    Kategori Bazında Adam-Saat
+                  </h3>
+                  {adamSaatKategoriFilter !== 'all' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAdamSaatKategoriFilter('all')}
+                    >
+                      Tüm Kategoriler
+                    </Button>
+                  )}
+                </div>
                 <p className="mb-2 text-xs text-muted-foreground">
-                  {adamSaatKategoriFilter === 'all'
-                    ? 'Her kategori toplu gösterilir — tek tek eğitimleri görmek için yukarıdan bir kategori seçin.'
-                    : 'Bu kategorideki her eğitim ayrı ayrı listeleniyor.'}
+                  Bir kategoriye tıklayınca altta o kategorideki eğitimler ayrı ayrı listelenir.
                 </p>
-                {adamSaatKategoriFilter === 'all' ? (
-                  !kategoriRollup.length ? (
-                    <p className="text-sm text-muted-foreground">
-                      Seçili tarih aralığında kayıt yok.
-                    </p>
-                  ) : (
-                    <Table containerClassName="max-h-[420px] overflow-auto rounded-lg border border-border">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Kategori</TableHead>
-                          <TableHead>Eğitim Sayısı</TableHead>
-                          <TableHead>Oturum Sayısı</TableHead>
-                          <TableHead>Toplam Kişi</TableHead>
-                          <TableHead>Adam-Saat</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {kategoriRollup.map((k) => (
-                          <TableRow
-                            key={k.kategori}
-                            className="cursor-pointer hover:bg-panel-2"
-                            onClick={() => setAdamSaatKategoriFilter(k.kategori)}
-                          >
-                            <TableCell className="font-semibold text-primary">
-                              {k.kategori}
-                            </TableCell>
-                            <TableCell className="font-mono text-muted-foreground">
-                              {k.egitimSayisi}
-                            </TableCell>
-                            <TableCell className="font-mono text-muted-foreground">
-                              {k.oturumSayisi}
-                            </TableCell>
-                            <TableCell className="font-mono text-muted-foreground">
-                              {k.toplamKisi}
-                            </TableCell>
-                            <TableCell className="font-mono font-semibold">
-                              {k.toplamAdamSaat.toLocaleString('tr-TR')}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )
-                ) : !secilenKategoriEgitimleri.length ? (
+                {!kategoriRollup.length ? (
                   <p className="text-sm text-muted-foreground">
-                    Bu kategoride seçili tarih aralığında kayıt yok.
+                    Seçili tarih aralığında kayıt yok.
                   </p>
                 ) : (
                   <Table containerClassName="max-h-[420px] overflow-auto rounded-lg border border-border">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Eğitim Adı</TableHead>
+                        <TableHead>Kategori</TableHead>
+                        <TableHead>Eğitim Sayısı</TableHead>
                         <TableHead>Oturum Sayısı</TableHead>
                         <TableHead>Toplam Kişi</TableHead>
                         <TableHead>Adam-Saat</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {secilenKategoriEgitimleri.map((e) => (
-                        <TableRow key={e.trainingId}>
-                          <TableCell>{e.egitimAdi}</TableCell>
+                      {kategoriRollup.map((k) => (
+                        <TableRow
+                          key={k.kategori}
+                          className={`cursor-pointer hover:bg-panel-2 ${adamSaatKategoriFilter === k.kategori ? 'bg-panel-2' : ''}`}
+                          onClick={() =>
+                            setAdamSaatKategoriFilter((cur) =>
+                              cur === k.kategori ? 'all' : k.kategori,
+                            )
+                          }
+                        >
+                          <TableCell className="font-semibold text-primary">{k.kategori}</TableCell>
                           <TableCell className="font-mono text-muted-foreground">
-                            {e.oturumSayisi}
+                            {k.egitimSayisi}
                           </TableCell>
                           <TableCell className="font-mono text-muted-foreground">
-                            {e.toplamKisi}
+                            {k.oturumSayisi}
+                          </TableCell>
+                          <TableCell className="font-mono text-muted-foreground">
+                            {k.toplamKisi}
                           </TableCell>
                           <TableCell className="font-mono font-semibold">
-                            {e.toplamAdamSaat.toLocaleString('tr-TR')}
+                            {k.toplamAdamSaat.toLocaleString('tr-TR')}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -798,11 +781,52 @@ export function RaporView({
                 )}
               </section>
 
+              {adamSaatKategoriFilter !== 'all' && (
+                <section>
+                  <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                    {adamSaatKategoriFilter} — Eğitim Bazında Adam-Saat
+                  </h3>
+                  {!secilenKategoriEgitimleri.length ? (
+                    <p className="text-sm text-muted-foreground">
+                      Bu kategoride seçili tarih aralığında kayıt yok.
+                    </p>
+                  ) : (
+                    <Table containerClassName="max-h-[420px] overflow-auto rounded-lg border border-border">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Eğitim Adı</TableHead>
+                          <TableHead>Oturum Sayısı</TableHead>
+                          <TableHead>Toplam Kişi</TableHead>
+                          <TableHead>Adam-Saat</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {secilenKategoriEgitimleri.map((e) => (
+                          <TableRow key={e.trainingId}>
+                            <TableCell>{e.egitimAdi}</TableCell>
+                            <TableCell className="font-mono text-muted-foreground">
+                              {e.oturumSayisi}
+                            </TableCell>
+                            <TableCell className="font-mono text-muted-foreground">
+                              {e.toplamKisi}
+                            </TableCell>
+                            <TableCell className="font-mono font-semibold">
+                              {e.toplamAdamSaat.toLocaleString('tr-TR')}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </section>
+              )}
+
               <section>
                 <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Seçili Aralıktaki Eğitim Oturumları
+                  {adamSaatKategoriFilter !== 'all' ? ` — ${adamSaatKategoriFilter}` : ''}
                 </h3>
-                {!aralikOturumlari.length ? (
+                {!aralikOturumlariGorunen.length ? (
                   <p className="text-sm text-muted-foreground">Seçili aralıkta oturum yok.</p>
                 ) : (
                   <Table containerClassName="max-h-[420px] overflow-auto rounded-lg border border-border">
@@ -817,7 +841,7 @@ export function RaporView({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {aralikOturumlari.map((s, i) => (
+                      {aralikOturumlariGorunen.map((s, i) => (
                         <TableRow key={`${s.trainingId}-${s.tarih}-${i}`}>
                           <TableCell className="font-mono text-muted-foreground">
                             {fmtDate(s.tarih)}
