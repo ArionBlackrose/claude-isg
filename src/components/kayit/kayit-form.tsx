@@ -204,7 +204,7 @@ export function KayitForm({
           <Input
             value={dosyaNo}
             onChange={(e) => setDosyaNo(e.target.value)}
-            placeholder="Eğitim evrağı dosya no"
+            placeholder="Eğitim evrakı dosya no"
           />
         </div>
         <div className="space-y-1.5">
