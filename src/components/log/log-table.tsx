@@ -10,6 +10,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Combobox,
+  ComboboxInputGroup,
+  ComboboxInput,
+  ComboboxIcon,
+  ComboboxContent,
+  ComboboxItem,
+} from '@/components/ui/combobox';
+import {
   Table,
   TableBody,
   TableCell,
@@ -107,14 +115,13 @@ export function LogTable({
     const set = new Set(personnel.map((p) => p.calismaSekli).filter((v): v is string => !!v));
     return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'))];
   }, [personnel]);
-  const egitimOptions = useMemo(
-    () => [{ id: 'all', ad: 'Tüm eğitimler' }, ...trainings],
-    [trainings],
-  );
-  const egitimLabels = useMemo(
-    () => Object.fromEntries(egitimOptions.map((t) => [t.id, t.ad])),
-    [egitimOptions],
-  );
+  // Eğitim seçenekleri, seçili kategoriye göre daraltılır — bir kategori
+  // seçildiğinde "Eğitim" listesinde sadece o kategoriye ait eğitimler görünür.
+  const egitimOptions = useMemo(() => {
+    const scoped =
+      kategoriFilter === 'all' ? trainings : trainings.filter((t) => t.kategori === kategoriFilter);
+    return [{ id: 'all', ad: 'Tüm eğitimler' }, ...scoped];
+  }, [trainings, kategoriFilter]);
 
   /** Kategori ve/veya belirli bir eğitim seçimine göre tabloda gösterilecek
    * (ve dışa aktarılacak) eğitim sütunları. */
@@ -317,7 +324,10 @@ export function LogTable({
       <div className="flex flex-wrap items-center gap-2.5">
         <Select
           value={kategoriFilter}
-          onValueChange={(v) => handleKategoriFilterChange(v ?? 'all')}
+          onValueChange={(v) => {
+            handleKategoriFilterChange(v ?? 'all');
+            handleEgitimFilterChange('all');
+          }}
         >
           <SelectTrigger className="w-44">
             <SelectValue>{(v: string) => (v === 'all' ? 'Tüm kategoriler' : v)}</SelectValue>
@@ -331,18 +341,25 @@ export function LogTable({
             ))}
           </SelectContent>
         </Select>
-        <Select value={egitimFilter} onValueChange={(v) => handleEgitimFilterChange(v ?? 'all')}>
-          <SelectTrigger className="w-52">
-            <SelectValue>{(v: string) => egitimLabels[v] ?? v}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {egitimOptions.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
+        <Combobox
+          items={egitimOptions}
+          value={egitimOptions.find((t) => t.id === egitimFilter) ?? egitimOptions[0]}
+          onValueChange={(v) => handleEgitimFilterChange(v?.id ?? 'all')}
+          itemToStringLabel={(t) => t.ad}
+          isItemEqualToValue={(a, b) => a.id === b.id}
+        >
+          <ComboboxInputGroup className="w-64">
+            <ComboboxInput placeholder="Eğitim adıyla ara..." />
+            <ComboboxIcon />
+          </ComboboxInputGroup>
+          <ComboboxContent>
+            {(t: { id: string; ad: string }) => (
+              <ComboboxItem key={t.id} value={t}>
                 {t.ad}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              </ComboboxItem>
+            )}
+          </ComboboxContent>
+        </Combobox>
         <Select
           value={egitimDurumFilter}
           onValueChange={(v) => handleEgitimDurumFilterChange(v ?? 'all')}
