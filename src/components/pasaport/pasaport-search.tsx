@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { fmtDate, tagClassFor } from '@/lib/training-status';
+import { fmtDate } from '@/lib/training-status';
 import { searchPassport, type PassportResult } from '@/actions/passport';
 
 const EMPTY_FORM = { tcNo: '', ad: '', soyad: '', firma: '' };
@@ -107,24 +107,31 @@ export function PasaportSearch() {
                     {p.durum}
                   </span>
                 </div>
-                {p.trainings.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Henüz pasaportta gösterilecek bir eğitim seçilmedi. Admin Paneli &gt; Eğitim
-                    Pasaportu bölümünden eğitim seçin.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {p.trainings.map((t) => (
-                      <span
-                        key={t.trainingId}
-                        className={`tag ${tagClassFor(t.code)}`}
-                        title={t.ad}
-                      >
-                        {t.ad}: {t.code === 'valid' ? fmtDate(t.label) : t.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {(() => {
+                  const taken = p.trainings.filter((t) => t.code !== 'none' && t.tarih);
+                  if (taken.length === 0) {
+                    return (
+                      <p className="text-sm text-muted-foreground">
+                        Bu kişinin pasaportta gösterilen eğitimlerden aldığı bulunmuyor.
+                      </p>
+                    );
+                  }
+                  return (
+                    <ul className="divide-y divide-border">
+                      {taken.map((t) => (
+                        <li
+                          key={t.trainingId}
+                          className="flex items-center justify-between gap-3 py-2 text-sm"
+                        >
+                          <span>{t.ad}</span>
+                          <span className="font-mono text-muted-foreground">
+                            {fmtDate(t.tarih)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                })()}
               </div>
             ))
           )}
