@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# İSG-Ç Eğitim Takip Sistemi
 
-## Getting Started
+Personel, eğitim kataloğu ve eğitim kayıtlarını takip eden, adam-saat
+raporlaması ve dış kullanıcılar için "Eğitim Pasaportu" sorgu paneli
+içeren Next.js uygulaması.
 
-First, run the development server:
+## Geliştirme ortamını çalıştırma
 
 ```bash
+npm install
+cp .env.example .env   # değerleri doldurun
+npm run db:migrate
+npm run db:seed        # ilk admin kullanıcıyı oluşturur (SEED_ADMIN_EMAIL)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`npm run dev` webpack ile çalışır (`next dev --webpack`) — bu ortamda
+Turbopack'in font çözümleyicisi bozuk olduğu için Turbopack
+kullanılmıyor. Build/typecheck/lint komutları için `package.json`daki
+script'lere bakın.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Geliştirme ortamında e-posta ile giriş akışı askıya alınmıştır:
+`src/lib/session.ts`'teki `LOGIN_DISABLED_TEMPORARILY` bayrağı sayesinde
+her istek otomatik olarak ilk admin kullanıcı olarak oturum açmış
+sayılır. Bu bayrak `NODE_ENV=production` olduğunda her koşulda devre
+dışıdır — canlıda her zaman gerçek e-posta OTP girişi çalışır.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Testler
 
-## Learn More
+```bash
+npm run test
+```
 
-To learn more about Next.js, take a look at the following resources:
+Kritik iş mantığı (eğitim durum/geçerlilik hesaplaması, adam-saat
+hesaplamaları, silme yetkisi kontrolleri) için Vitest ile yazılmış
+birim testleri `src/lib/**/*.test.ts` altında bulunur.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Canlıya almadan önce
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`.env.example` dosyasındaki tüm değişkenler doldurulmalı; özellikle:
 
-## Deploy on Vercel
+- `RESEND_API_KEY` / `RESEND_FROM_EMAIL` — doldurulmazsa giriş kodları
+  hiçbir yere gönderilmez (sadece sunucu logunda görünür).
+- `BETTER_AUTH_SECRET` — rastgele, uzun ve gizli olmalı.
+- `BETTER_AUTH_URL` — uygulamanın gerçek canlı adresi olmalı.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Sunucu ayakta olduğu sürece arka planda otomatik olarak:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Veritabanının WAL-güvenli günlük yedeği alınır (`backups/`, son 14
+  yedek tutulur — bkz. `src/lib/backup.ts`),
+- Süresi dolmuş/30 gün içinde dolacak eğitimler için tam yetkili
+  adminlere haftalık özet e-postası gönderilir (bkz.
+  `src/lib/notifications.ts`).
+
+Bu iki görev `src/db/index.ts` üzerinden, veritabanı modülü ilk
+import edildiğinde bir kez kurulan saatlik bir zamanlayıcıyla
+tetiklenir.
