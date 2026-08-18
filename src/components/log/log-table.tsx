@@ -123,14 +123,36 @@ export function LogTable({
     return [{ id: 'all', ad: 'Tüm eğitimler' }, ...scoped];
   }, [trainings, kategoriFilter]);
 
-  /** Kategori ve/veya belirli bir eğitim seçimine göre tabloda gösterilecek
-   * (ve dışa aktarılacak) eğitim sütunları. */
-  const visibleTrainings = useMemo(() => {
+  const usedTrainingIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of records) set.add(r.trainingId);
+    return set;
+  }, [records]);
+
+  /** Kategori ve/veya belirli bir eğitim seçimine göre dışa aktarılacak
+   * eğitim sütunları (Excel İndir). Filtre uygulanmadığında kataloğun
+   * tamamı dahil edilir. */
+  const exportTrainings = useMemo(() => {
     let list = trainings;
     if (kategoriFilter !== 'all') list = list.filter((t) => t.kategori === kategoriFilter);
     if (egitimFilter !== 'all') list = list.filter((t) => t.id === egitimFilter);
     return list;
   }, [trainings, kategoriFilter, egitimFilter]);
+
+  /** Ekranda tabloda gösterilecek eğitim sütunları. Hiçbir kategori/eğitim
+   * seçilmemişse — yani varsayılan görünümde — kataloğun tamamı yerine
+   * sadece en az bir kaydı olan eğitimler gösterilir; katalogda yüzlerce
+   * hiç kullanılmamış eğitim türü olabildiğinden (ör. toplu içe aktarılan
+   * "Özel" eğitimler), hepsini sütun olarak basmak tabloyu binlerce hücreye
+   * şişirip her Kayıtlar ziyaretini yavaşlatıyordu. Belirli bir kategori
+   * veya eğitim seçildiğinde bu daraltma uygulanmaz — o zaman kaydı olmasa
+   * bile seçilen eğitim(ler) gösterilir. */
+  const visibleTrainings = useMemo(() => {
+    if (kategoriFilter === 'all' && egitimFilter === 'all') {
+      return exportTrainings.filter((t) => usedTrainingIds.has(t.id));
+    }
+    return exportTrainings;
+  }, [exportTrainings, kategoriFilter, egitimFilter, usedTrainingIds]);
 
   // records'ı personel×eğitim anahtarına göre bir kez gruplayıp önbellekler;
   // statusFor'un her çağrıda tüm records dizisini taraması yerine render,
@@ -252,7 +274,7 @@ export function LogTable({
       'Firması',
       'Çalışma Şekli',
       'Çalışma Durumu',
-      ...visibleTrainings.map((t) => t.ad),
+      ...exportTrainings.map((t) => t.ad),
     ];
     const aoa: (string | number)[][] = [header];
     filtered.forEach((p, i) => {
@@ -265,7 +287,7 @@ export function LogTable({
         p.calismaSekli || '',
         p.durum,
       ];
-      const cols = visibleTrainings.map((t) => {
+      const cols = exportTrainings.map((t) => {
         const s = getStatus(p.id, t.id, t);
         return s.tarih && s.code === 'valid' ? fmtDate(s.label) : s.label;
       });

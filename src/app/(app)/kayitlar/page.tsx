@@ -20,7 +20,9 @@ export default async function KayitlarPage() {
       <h2 className="mb-1 font-heading text-xl font-bold tracking-wide uppercase">Kayıtlar</h2>
       <p className="mb-4 text-xs text-muted-foreground">
         Sıra No · TC Kimlik No · Adı Soyadı · Görevi · Firması · Çalışma Şekli · Çalışma Durumu ·
-        ardından her eğitim için durum. Bir hücreye tıklayarak düzenleyebilirsiniz.
+        ardından her eğitim için durum. Bir hücreye tıklayarak düzenleyebilirsiniz. Varsayılan
+        görünümde sadece en az bir kaydı olan eğitimler sütun olarak gösterilir; kaydı olmayan bir
+        eğitimi görmek için yukarıdan kategori veya eğitim adıyla arayıp seçin.
       </p>
       <LogTable
         personnel={allPersonnel}
