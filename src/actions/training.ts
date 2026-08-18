@@ -58,6 +58,36 @@ export async function updateTraining(id: string, input: unknown): Promise<Action
   return { ok: true };
 }
 
+/** Eğitim Pasaportu panelinde hangi eğitimlerin gösterileceğini toplu
+ * olarak günceller — sadece burada işaretli eğitimler dış kullanıcı
+ * sorgu sonuçlarında görünür. */
+export async function updatePasaportTrainings(selectedIds: string[]): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const allTrainings = await db.select().from(training);
+  const selected = new Set(selectedIds);
+
+  await db.transaction((tx) => {
+    for (const t of allTrainings) {
+      const shouldShow = selected.has(t.id);
+      if (shouldShow !== t.pasaportGoster) {
+        tx.update(training).set({ pasaportGoster: shouldShow }).where(eq(training.id, t.id)).run();
+      }
+    }
+  });
+
+  revalidatePath('/admin/pasaport');
+  revalidatePath('/pasaport');
+  await logActivity(
+    session,
+    'update',
+    'egitim',
+    null,
+    'Eğitim Pasaportu Seçimi',
+    `Pasaportta gösterilecek eğitim sayısı: ${selected.size}.`,
+  );
+  return { ok: true };
+}
+
 export async function deleteTraining(id: string): Promise<ActionResult> {
   const session = await requireAdmin();
   const [existing] = await db.select().from(training).where(eq(training.id, id));

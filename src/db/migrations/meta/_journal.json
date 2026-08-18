@@ -43,6 +43,13 @@
       "when": 1786957045802,
       "tag": "0005_remarkable_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787048759187,
+      "tag": "0006_clever_lord_hawal",
+      "breakpoints": true
     }
   ]
 }

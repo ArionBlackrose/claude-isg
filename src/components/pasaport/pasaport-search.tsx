@@ -39,8 +39,8 @@ export function PasaportSearch() {
           Eğitim Pasaportu Sorgu
         </h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          Çalışanın T.C. Kimlik No, Ad, Soyad veya Firma bilgisini girerek 3. Taraf eğitim durumunu
-          sorgulayın.
+          Çalışanın T.C. Kimlik No, Ad, Soyad veya Firma bilgisini girerek, yöneticinin bu panelde
+          gösterilmek üzere seçtiği eğitimlerdeki durumunu sorgulayın.
         </p>
         <form
           onSubmit={handleSubmit}
@@ -109,7 +109,8 @@ export function PasaportSearch() {
                 </div>
                 {p.trainings.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Kataloğa henüz 3. Taraf eğitimi eklenmedi.
+                    Henüz pasaportta gösterilecek bir eğitim seçilmedi. Admin Paneli &gt; Eğitim
+                    Pasaportu bölümünden eğitim seçin.
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-2">

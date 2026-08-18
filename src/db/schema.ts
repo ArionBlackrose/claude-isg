@@ -48,6 +48,7 @@ export const training = sqliteTable('training', {
     .default('Genel'),
   gecerlilikAy: integer('gecerlilik_ay').notNull().default(0),
   egitimSuresi: integer('egitim_suresi').notNull().default(0),
+  pasaportGoster: integer('pasaport_goster', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),

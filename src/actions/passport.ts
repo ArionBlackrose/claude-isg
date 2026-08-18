@@ -42,8 +42,9 @@ async function requireExternalAccess() {
 }
 
 /** Girilen T.C. kimlik no / ad / soyad / firma bilgilerine göre personeli
- * bulur ve sadece "3. Taraf" kategorisindeki eğitimler için durumunu
- * döner — Eğitim Pasaportu sorgu panelinin tek veri kaynağı budur. */
+ * bulur ve sadece admin tarafından "Pasaportta göster" olarak işaretlenmiş
+ * eğitimler için durumunu döner — Eğitim Pasaportu sorgu panelinin tek veri
+ * kaynağı budur. */
 export async function searchPassport(input: PassportSearchInput): Promise<PassportResult[]> {
   await requireExternalAccess();
 
@@ -54,9 +55,9 @@ export async function searchPassport(input: PassportSearchInput): Promise<Passpo
 
   if (!tcNo && !ad && !soyad && !firma) return [];
 
-  const [allPersonnel, thirdPartyTrainings, records] = await Promise.all([
+  const [allPersonnel, visibleTrainings, records] = await Promise.all([
     db.select().from(personnel),
-    db.select().from(training).where(eq(training.kategori, '3. Taraf')),
+    db.select().from(training).where(eq(training.pasaportGoster, true)),
     db.select().from(trainingRecord),
   ]);
 
@@ -76,7 +77,7 @@ export async function searchPassport(input: PassportSearchInput): Promise<Passpo
     firma: p.firma,
     gorev: p.gorev,
     durum: p.durum,
-    trainings: thirdPartyTrainings.map((t) => {
+    trainings: visibleTrainings.map((t) => {
       const status = statusFor(p.id, t.id, records, t);
       return {
         trainingId: t.id,

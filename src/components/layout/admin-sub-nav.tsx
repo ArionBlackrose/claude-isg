@@ -8,6 +8,7 @@ const SUB_TABS = [
   { href: '/admin/kullanicilar', label: 'Kullanıcılar' },
   { href: '/admin/aktivite', label: 'Aktivite' },
   { href: '/admin/proje', label: 'Proje Bilgileri' },
+  { href: '/admin/pasaport', label: 'Eğitim Pasaportu' },
 ] as const;
 
 export function AdminSubNav() {
