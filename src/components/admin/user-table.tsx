@@ -22,13 +22,17 @@ import {
 import { updateUserRole } from '@/actions/users';
 import { UserEditDialog } from './user-edit-dialog';
 
-const ROLE_LABELS: Record<string, string> = { admin: 'Yönetici', user: 'Kullanıcı' };
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Yönetici',
+  user: 'Kullanıcı',
+  dis: 'Dış Kullanıcı (Eğitim Pasaportu)',
+};
 
 export type AdminUserRow = {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'dis';
 };
 
 export function UserTable({
@@ -43,7 +47,7 @@ export function UserTable({
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
 
   async function handleRoleChange(userId: string, role: string | null) {
-    if (!role || (role !== 'admin' && role !== 'user')) return;
+    if (!role || (role !== 'admin' && role !== 'user' && role !== 'dis')) return;
     setPendingId(userId);
     const result = await updateUserRole(userId, role);
     setPendingId(null);
@@ -87,6 +91,7 @@ export function UserTable({
                     <SelectContent>
                       <SelectItem value="user">Kullanıcı</SelectItem>
                       <SelectItem value="admin">Yönetici</SelectItem>
+                      <SelectItem value="dis">Dış Kullanıcı (Eğitim Pasaportu)</SelectItem>
                     </SelectContent>
                   </Select>
                 </TableCell>

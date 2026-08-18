@@ -26,13 +26,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import {
-  addMonths,
-  daysBetween,
-  todayStr,
-  fmtDate,
-  type TrainingStatusCode,
-} from '@/lib/training-status';
+import { addMonths, daysBetween, todayStr, fmtDate, tagClassFor } from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
 import { TRAINING_CATEGORIES } from '@/schemas/training';
 import { KayitEditDialog } from './kayit-edit-dialog';
@@ -75,13 +69,6 @@ const EGITIM_DURUM_OPTIONS: { value: string; label: string }[] = [
 const EGITIM_DURUM_LABELS = Object.fromEntries(EGITIM_DURUM_OPTIONS.map((o) => [o.value, o.label]));
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
-
-function tagClassFor(code: TrainingStatusCode) {
-  if (code === 'expired') return 'tag-bad';
-  if (code === 'soon') return 'tag-warn';
-  if (code === 'valid') return 'tag-ok';
-  return 'tag-none';
-}
 
 export function LogTable({
   personnel,

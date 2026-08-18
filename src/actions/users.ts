@@ -79,7 +79,7 @@ export async function updateUser(userId: string, input: unknown): Promise<Action
 
 export async function updateUserRole(
   userId: string,
-  role: 'admin' | 'user',
+  role: 'admin' | 'user' | 'dis',
 ): Promise<ActionResult> {
   const session = await requireAdmin();
   if (session.user.id === userId) {

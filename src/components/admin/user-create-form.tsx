@@ -17,7 +17,11 @@ import {
 import { createUser } from '@/actions/users';
 import { createUserSchema, type CreateUserInput } from '@/schemas/user';
 
-const ROLE_LABELS: Record<string, string> = { admin: 'Yönetici', user: 'Kullanıcı' };
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Yönetici',
+  user: 'Kullanıcı',
+  dis: 'Dış Kullanıcı (Eğitim Pasaportu)',
+};
 const DEFAULTS: CreateUserInput = { name: '', email: '', role: 'user' };
 
 export function UserCreateForm() {
@@ -66,7 +70,7 @@ export function UserCreateForm() {
         <Label htmlFor="role">Rol</Label>
         <Select
           value={watch('role')}
-          onValueChange={(v) => setValue('role', (v as 'admin' | 'user') ?? 'user')}
+          onValueChange={(v) => setValue('role', (v as 'admin' | 'user' | 'dis') ?? 'user')}
         >
           <SelectTrigger id="role" className="w-full">
             <SelectValue>{(v: string) => ROLE_LABELS[v] ?? v}</SelectValue>
@@ -74,6 +78,7 @@ export function UserCreateForm() {
           <SelectContent>
             <SelectItem value="user">Kullanıcı</SelectItem>
             <SelectItem value="admin">Yönetici</SelectItem>
+            <SelectItem value="dis">Dış Kullanıcı (Eğitim Pasaportu)</SelectItem>
           </SelectContent>
         </Select>
       </div>

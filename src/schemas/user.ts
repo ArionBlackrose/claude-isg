@@ -7,7 +7,7 @@ export const createUserSchema = z.object({
     .min(1, 'Ad Soyad zorunlu.')
     .max(50, 'Ad Soyad en fazla 50 karakter olabilir.'),
   email: z.email('Geçerli bir e-posta adresi girin.'),
-  role: z.enum(['admin', 'user']),
+  role: z.enum(['admin', 'user', 'dis']),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;

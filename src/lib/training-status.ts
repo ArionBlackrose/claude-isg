@@ -82,3 +82,11 @@ export function statusFor(
   if (diff <= 30) return { code: 'soon', label: `Yaklaşıyor (${diff}g)`, tarih: last.tarih };
   return { code: 'valid', label: last.tarih, tarih: last.tarih };
 }
+
+/** Bir eğitim durum koduna karşılık gelen rozet (tag) CSS sınıfı. */
+export function tagClassFor(code: TrainingStatusCode): string {
+  if (code === 'expired') return 'tag-bad';
+  if (code === 'soon') return 'tag-warn';
+  if (code === 'valid') return 'tag-ok';
+  return 'tag-none';
+}
