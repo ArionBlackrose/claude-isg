@@ -4,12 +4,13 @@ export function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
 }
 
-export async function sendOtpEmail(email: string, otp: string): Promise<void> {
+/** Resend yapılandırılmamışsa (geliştirme/kurulum sürecinde) e-postayı
+ * göndermek yerine sunucu logunda gösterir — hem giriş akışı hem de
+ * bildirimler Resend olmadan da test edilebilir. */
+async function sendMail(to: string | string[], subject: string, html: string): Promise<void> {
   if (!isEmailConfigured()) {
-    // Resend yapılandırılmamış — geliştirme/kurulum sürecinde kodu sunucu
-    // logunda gösteriyoruz ki giriş akışı Resend olmadan da test edilebilsin.
     console.warn(
-      `[mail] RESEND_API_KEY/RESEND_FROM_EMAIL tanımlı değil. ${email} için giriş kodu: ${otp}`,
+      `[mail] RESEND_API_KEY/RESEND_FROM_EMAIL tanımlı değil. "${subject}" e-postası ${Array.isArray(to) ? to.join(', ') : to} adresine gönderilemedi (log'a yazıldı).`,
     );
     return;
   }
@@ -17,9 +18,21 @@ export async function sendOtpEmail(email: string, otp: string): Promise<void> {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { error } = await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL as string,
-    to: email,
-    subject: `Giriş Kodunuz: ${otp}`,
-    html: `
+    to,
+    subject,
+    html,
+  });
+
+  if (error) {
+    throw new Error(`E-posta gönderilemedi: ${error.message}`);
+  }
+}
+
+export async function sendOtpEmail(email: string, otp: string): Promise<void> {
+  await sendMail(
+    email,
+    `Giriş Kodunuz: ${otp}`,
+    `
       <div style="font-family:sans-serif;max-width:420px;margin:0 auto;">
         <h2 style="letter-spacing:0.3px;">İSG-Ç Eğitim Takip Sistemi</h2>
         <p>Giriş kodunuz:</p>
@@ -27,9 +40,10 @@ export async function sendOtpEmail(email: string, otp: string): Promise<void> {
         <p style="color:#666;font-size:13px;">Bu kod 5 dakika içinde geçerliliğini yitirir. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>
       </div>
     `,
-  });
+  );
+}
 
-  if (error) {
-    throw new Error(`E-posta gönderilemedi: ${error.message}`);
-  }
+export async function sendDigestEmail(to: string[], subject: string, html: string): Promise<void> {
+  if (!to.length) return;
+  await sendMail(to, subject, html);
 }

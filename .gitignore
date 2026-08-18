@@ -39,6 +39,10 @@ yarn-error.log*
 # sqlite veritabanı
 /data/*.db
 /data/*.db-*
+/data/.last-digest-sent
+
+# otomatik veritabanı yedekleri (kişisel veri içerir, repoya girmemeli)
+/backups/
 
 # typescript
 *.tsbuildinfo
