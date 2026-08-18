@@ -1,7 +1,7 @@
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { getSession } from '@/lib/session';
+import { canDeleteTraining, getSession } from '@/lib/session';
 import { statusFor } from '@/lib/training-status';
 import { KatalogForm } from '@/components/katalog/katalog-form';
 import { KatalogTable, type KatalogRow } from '@/components/katalog/katalog-table';
@@ -35,6 +35,7 @@ export default async function KatalogPage() {
   });
 
   const isAdmin = session?.user.role === 'admin';
+  const canDelete = isAdmin && canDeleteTraining(session?.user.email ?? '');
 
   return (
     <div className="space-y-4">
@@ -54,7 +55,7 @@ export default async function KatalogPage() {
           Eğitim adı, kategori veya geçerlilik süresini değiştirmek için &quot;Düzenle&quot;
           butonuna tıklayın.
         </p>
-        <KatalogTable rows={rows} isAdmin={isAdmin} />
+        <KatalogTable rows={rows} isAdmin={isAdmin} canDelete={canDelete} />
       </div>
     </div>
   );

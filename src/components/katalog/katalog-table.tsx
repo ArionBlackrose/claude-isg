@@ -24,6 +24,8 @@ import {
 import { deleteTraining, updateTraining } from '@/actions/training';
 import { TRAINING_CATEGORIES, type TrainingInput } from '@/schemas/training';
 
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
+
 export type KatalogRow = {
   id: string;
   ad: string;
@@ -35,7 +37,15 @@ export type KatalogRow = {
   soonCount: number;
 };
 
-export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: boolean }) {
+export function KatalogTable({
+  rows,
+  isAdmin,
+  canDelete,
+}: {
+  rows: KatalogRow[];
+  isAdmin: boolean;
+  canDelete: boolean;
+}) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{
@@ -51,6 +61,8 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
   });
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLocaleLowerCase('tr-TR');
@@ -61,6 +73,22 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
         row.kategori.toLocaleLowerCase('tr-TR').includes(q),
     );
   }, [rows, search]);
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
+  function handlePageSizeChange(value: number) {
+    setPageSize(value);
+    setPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const pagedRows = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, page, pageSize]);
 
   function startEdit(row: KatalogRow) {
     setEditingId(row.id);
@@ -114,12 +142,15 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
 
   return (
     <div className="space-y-3">
-      <Input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Eğitim adı veya kategoriyle arayın..."
-        className="max-w-sm"
-      />
+      <div className="flex flex-wrap items-center gap-2.5">
+        <Input
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="Eğitim adı veya kategoriyle arayın..."
+          className="max-w-sm"
+        />
+        <span className="text-xs text-muted-foreground">{filteredRows.length} eğitim</span>
+      </div>
       {filteredRows.length === 0 ? (
         <div className="rounded-lg border border-border p-10 text-center text-muted-foreground">
           Sonuç bulunamadı.
@@ -138,7 +169,7 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredRows.map((row) => {
+            {pagedRows.map((row) => {
               const isEditing = editingId === row.id;
               const isPending = pendingId === row.id;
               if (isEditing) {
@@ -240,15 +271,17 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
                       <Button size="sm" variant="outline" onClick={() => startEdit(row)}>
                         Düzenle
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-danger text-danger hover:bg-danger/10"
-                        disabled={isPending}
-                        onClick={() => handleDelete(row)}
-                      >
-                        Sil
-                      </Button>
+                      {canDelete && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-danger text-danger hover:bg-danger/10"
+                          disabled={isPending}
+                          onClick={() => handleDelete(row)}
+                        >
+                          Sil
+                        </Button>
+                      )}
                     </TableCell>
                   )}
                 </TableRow>
@@ -256,6 +289,51 @@ export function KatalogTable({ rows, isAdmin }: { rows: KatalogRow[]; isAdmin: b
             })}
           </TableBody>
         </Table>
+      )}
+      {filteredRows.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Sayfa başına:</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => handlePageSizeChange(Number(v) || PAGE_SIZE_OPTIONS[0])}
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZE_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={String(s)}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Önceki
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Sayfa {page} / {totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Sonraki
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

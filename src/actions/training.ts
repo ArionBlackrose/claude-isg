@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { training, trainingRecord } from '@/db/schema';
-import { requireAdmin } from '@/lib/session';
+import { canDeleteTraining, requireAdmin } from '@/lib/session';
 import { logActivity, diffSummary } from '@/lib/audit';
 import { trainingSchema } from '@/schemas/training';
 
@@ -90,6 +90,9 @@ export async function updatePasaportTrainings(selectedIds: string[]): Promise<Ac
 
 export async function deleteTraining(id: string): Promise<ActionResult> {
   const session = await requireAdmin();
+  if (!canDeleteTraining(session.user.email)) {
+    return { ok: false, error: 'Eğitim türü silme yetkiniz yok.' };
+  }
   const [existing] = await db.select().from(training).where(eq(training.id, id));
   await db.delete(trainingRecord).where(eq(trainingRecord.trainingId, id));
   await db.delete(training).where(eq(training.id, id));
