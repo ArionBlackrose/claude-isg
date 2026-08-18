@@ -1,6 +1,6 @@
 import { db } from '@/db';
 import { personnel, personnelHistory, training, trainingRecord, user } from '@/db/schema';
-import { getSession } from '@/lib/session';
+import { canDeletePersonnel, getSession } from '@/lib/session';
 import { PersonelForm } from '@/components/personel/personel-form';
 import { PersonelTable, type PersonelRow } from '@/components/personel/personel-table';
 import { ExcelSyncPersonel } from '@/components/personel/excel-sync-personel';
@@ -44,6 +44,7 @@ export default async function PersonelPage() {
   }));
 
   const isAdmin = session?.user.role === 'admin';
+  const canDelete = isAdmin && canDeletePersonnel(session?.user.email ?? '');
 
   return (
     <div className="space-y-4">
@@ -65,7 +66,7 @@ export default async function PersonelPage() {
         <h2 className="mb-4 font-heading text-xl font-bold tracking-wide uppercase">
           Personel Listesi
         </h2>
-        <PersonelTable rows={rows} isAdmin={isAdmin} />
+        <PersonelTable rows={rows} isAdmin={isAdmin} canDelete={canDelete} />
       </div>
     </div>
   );

@@ -63,7 +63,15 @@ const DURUM_FILTER_LABELS: Record<string, string> = {
   Çıkış: 'Çıkış',
 };
 
-export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin: boolean }) {
+export function PersonelTable({
+  rows,
+  isAdmin,
+  canDelete,
+}: {
+  rows: PersonelRow[];
+  isAdmin: boolean;
+  canDelete: boolean;
+}) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [durumFilter, setDurumFilter] = useState('all');
@@ -172,7 +180,7 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
                     <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
                       Düzenle
                     </Button>
-                    {isAdmin && (
+                    {canDelete && (
                       <Button
                         size="sm"
                         variant="outline"

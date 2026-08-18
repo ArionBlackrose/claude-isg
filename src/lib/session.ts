@@ -48,3 +48,12 @@ export async function requireAdmin() {
   if (session.user.role !== 'admin') redirect('/');
   return session;
 }
+
+// Personel silme, geri alınamaz bir işlem olduğu için (kayıtlar ve geçmiş
+// dönemler de birlikte silinir) tam yetkili adminler arasında bile sadece
+// bu iki hesapla sınırlandırıldı.
+const PERSONNEL_DELETE_ALLOWED_EMAILS = ['xechto@gmail.com', 'sethblackrose@gmail.com'];
+
+export function canDeletePersonnel(email: string): boolean {
+  return PERSONNEL_DELETE_ALLOWED_EMAILS.includes(email);
+}

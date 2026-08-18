@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { personnel, personnelHistory } from '@/db/schema';
-import { requireAdmin, requireSession } from '@/lib/session';
+import { canDeletePersonnel, requireAdmin, requireSession } from '@/lib/session';
 import { normName, splitName } from '@/lib/excel';
 import { todayStr } from '@/lib/training-status';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
@@ -191,6 +191,9 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
 
 export async function deletePersonnel(id: string): Promise<ActionResult> {
   const session = await requireAdmin();
+  if (!canDeletePersonnel(session.user.email)) {
+    return { ok: false, error: 'Personel silme yetkiniz yok.' };
+  }
   const [existing] = await db.select().from(personnel).where(eq(personnel.id, id));
   await db.delete(personnel).where(eq(personnel.id, id));
   revalidatePersonnelPaths();
