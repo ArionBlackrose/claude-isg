@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
-import { requireAdmin, requireSession } from '@/lib/session';
+import { requireAdmin, requireInternalSession } from '@/lib/session';
 import { normName } from '@/lib/excel';
 import { logActivity, diffSummary } from '@/lib/audit';
 import { recordSchema, recordUpdateSchema, recordsBatchSchema } from '@/schemas/record';
@@ -30,7 +30,7 @@ async function recordLabel(personnelId: string, trainingId: string): Promise<str
 }
 
 export async function createRecord(input: unknown): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireInternalSession();
   const parsed = recordSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -66,7 +66,7 @@ export type RecordsBatchResult = { ok: true; created: number } | { ok: false; er
  * (bir kisiye birden fazla egitim, ya da bir egitimi birden fazla kisiye
  * tek seferde eklemek icin). */
 export async function createRecords(input: unknown): Promise<RecordsBatchResult> {
-  const session = await requireSession();
+  const session = await requireInternalSession();
   const parsed = recordsBatchSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -128,7 +128,7 @@ export async function createRecords(input: unknown): Promise<RecordsBatchResult>
 }
 
 export async function updateRecord(id: string, input: unknown): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireInternalSession();
   const parsed = recordUpdateSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -190,7 +190,7 @@ export async function uploadRecordCertificate(
   recordId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireInternalSession();
   const file = formData.get('file');
   if (!(file instanceof File)) {
     return { ok: false, error: 'Dosya bulunamadı.' };
@@ -247,7 +247,7 @@ const VALID_SONUC = new Set(['Başarılı', 'Başarısız', 'Katılmadı']);
 export async function importRecordsFromExcel(
   rows: RecordExcelRawRow[],
 ): Promise<RecordImportResult> {
-  const session = await requireSession();
+  const session = await requireInternalSession();
 
   if (!Array.isArray(rows) || !rows.length) {
     return { ok: false, error: 'Excel dosyasında satır bulunamadı.' };

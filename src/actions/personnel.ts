@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { personnel, personnelHistory } from '@/db/schema';
-import { canDeletePersonnel, requireAdmin, requireSession } from '@/lib/session';
+import { canDeletePersonnel, requireAdmin, requireInternalSession } from '@/lib/session';
 import { normName, splitName } from '@/lib/excel';
 import { todayStr } from '@/lib/training-status';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
@@ -26,7 +26,7 @@ async function findTcConflict(tcNo: string | undefined, excludeId?: string) {
 }
 
 export async function createPersonnel(input: unknown): Promise<CreateResult> {
-  const session = await requireSession();
+  const session = await requireInternalSession();
   const parsed = personnelSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -55,7 +55,7 @@ export async function createPersonnel(input: unknown): Promise<CreateResult> {
 }
 
 export async function updatePersonnel(id: string, input: unknown): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireInternalSession();
   const parsed = personnelSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -130,7 +130,7 @@ export async function updatePersonnel(id: string, input: unknown): Promise<Actio
   }
 
   const nextCikisTarihi = durumChangingToExit
-    ? todayStr()
+    ? previousCikisTarihi || todayStr()
     : durumReactivating
       ? null
       : existing.cikisTarihi;

@@ -61,6 +61,10 @@ export function KayitEditDialog({
 
   async function handleSave(r: LogRecord) {
     const draft = draftFor(r);
+    if (!draft.dosyaNo.trim()) {
+      toast.error('Dosya No zorunlu.');
+      return;
+    }
     setPendingId(r.id);
     const result = await updateRecord(r.id, draft);
     setPendingId(null);
@@ -180,7 +184,9 @@ export function KayitEditDialog({
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label>Dosya No</Label>
+                    <Label>
+                      Dosya No<span className="text-danger"> *</span>
+                    </Label>
                     <Input
                       value={draft.dosyaNo}
                       onChange={(e) =>

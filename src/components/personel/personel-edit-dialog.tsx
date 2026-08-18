@@ -46,7 +46,11 @@ export function PersonelEditDialog({
       soyad: personnel.soyad,
       gorev: personnel.gorev ?? '',
       firma: personnel.firma ?? '',
-      calismaSekli: personnel.calismaSekli ?? 'Tam Zamanlı',
+      // "Tam Zamanlı" gibi sahte bir varsayılana düşülmüyor — bu personelin
+      // veritabanında hâlâ hiç çalışma şekli girilmemişse (null), formu hiç
+      // değiştirmeden kaydetmek updatePersonnel'de gerçek bir değişiklik
+      // gibi algılanıp sahte bir istihdam geçmişi kaydı oluşturuyordu.
+      calismaSekli: personnel.calismaSekli ?? '',
       dogumTarihi: personnel.dogumTarihi ?? '',
       iseGirisTarihi: personnel.iseGirisTarihi ?? '',
       durum: personnel.durum,

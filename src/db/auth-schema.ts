@@ -17,6 +17,10 @@ export const user = sqliteTable('user', {
   role: text('role', { enum: ['admin', 'user', 'dis'] })
     .notNull()
     .default('user'),
+  // Sadece "dis" (Eğitim Pasaportu dış kullanıcısı) hesapları için
+  // anlamlı: doluysa, o hesabın pasaport sorguları sadece bu firmadaki
+  // personelle sınırlanır (çapraz firma veri sızıntısını önlemek için).
+  firma: text('firma'),
 });
 
 export const session = sqliteTable(

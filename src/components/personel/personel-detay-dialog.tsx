@@ -63,6 +63,10 @@ export function PersonelDetayDialog({
   }
 
   async function saveEdit(id: string) {
+    if (!draft.dosyaNo.trim()) {
+      toast.error('Dosya No zorunlu.');
+      return;
+    }
     setPendingId(id);
     const result = await updateRecord(id, draft);
     setPendingId(null);

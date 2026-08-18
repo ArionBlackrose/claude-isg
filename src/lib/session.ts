@@ -10,16 +10,28 @@ import { auth } from './auth';
 // olarak ilk admin kullanıcı olarak oturum açmış sayılıyor. Gerçek girişi
 // geri açmak için bu satırı false yapmak yeterli.
 // GÜVENLİK: production'da (NODE_ENV === 'production') bu bayrak ne olursa
-// olsun asla etkili olmaz — yanlışlıkla canlıya bu haliyle deploy edilse bile
-// gerçek kimlik doğrulama devrede kalır.
-const LOGIN_DISABLED_TEMPORARILY = process.env.NODE_ENV !== 'production' && true;
+// olsun asla etkili olmaz. Ayrıca NODE_ENV'in yanlışlıkla ayarlanmadığı
+// (örn. next start yerine doğrudan node ile çalıştırılan özel bir sunucu,
+// konteyner içinde NODE_ENV'in unutulduğu bir kurulum) bir ortamda bile
+// bypass'ın devreye girmemesi için ayrıca ALLOW_DEV_LOGIN_BYPASS=true
+// ortam değişkeninin de açıkça ayarlanmış olması gerekiyor — .env
+// dosyasında bu değişken yoksa (canlı sunucularda genelde olmaz) bypass
+// hiçbir koşulda çalışmaz.
+const LOGIN_DISABLED_TEMPORARILY =
+  process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEV_LOGIN_BYPASS === 'true';
 
 async function bypassSession() {
   const [admin] = await db.select().from(user).where(eq(user.role, 'admin')).limit(1);
   const devUser = admin ?? (await db.select().from(user).limit(1))[0];
   if (!devUser) return null;
   return {
-    user: { id: devUser.id, name: devUser.name, email: devUser.email, role: devUser.role },
+    user: {
+      id: devUser.id,
+      name: devUser.name,
+      email: devUser.email,
+      role: devUser.role,
+      firma: devUser.firma,
+    },
     session: { id: 'dev-bypass', userId: devUser.id },
   };
 }
@@ -46,6 +58,19 @@ export async function requireSession() {
 export async function requireAdmin() {
   const session = await requireSession();
   if (session.user.role !== 'admin') redirect('/');
+  return session;
+}
+
+// "dis" (Eğitim Pasaportu dış kullanıcısı) rolündeki hesaplar sadece
+// /pasaport sorgu panelini görebilmeli — personel/kayıt oluşturma veya
+// düzenleme gibi normal kullanıcı işlemlerine de erişememeli. Sayfa
+// düzeyinde (app)/layout.tsx bu rolü zaten /pasaport'a yönlendiriyor,
+// ama server action'lar sayfa render zincirinden bağımsız doğrudan
+// çağrılabildiği için mutasyon yapan her action bu korumayı ayrıca
+// kendi içinde uygulamalı.
+export async function requireInternalSession() {
+  const session = await requireSession();
+  if (session.user.role === 'dis') redirect('/pasaport');
   return session;
 }
 

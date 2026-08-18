@@ -33,20 +33,26 @@ export type PassportResult = {
 };
 
 const MAX_RESULTS = 25;
+// Tek karakterli sorgularla tüm personel tablosunun taranmasını (harf harf
+// deneyerek veri toplama) engellemek için her doldurulan alan en az bu
+// kadar karakter içermeli.
+const MIN_QUERY_LENGTH = 2;
 
 async function requireExternalAccess() {
   const session = await requireSession();
   if (session.user.role !== 'dis' && session.user.role !== 'admin') {
     throw new Error('Bu işlem için yetkiniz yok.');
   }
+  return session;
 }
 
 /** Girilen T.C. kimlik no / ad / soyad / firma bilgilerine göre personeli
  * bulur ve sadece admin tarafından "Pasaportta göster" olarak işaretlenmiş
  * eğitimler için durumunu döner — Eğitim Pasaportu sorgu panelinin tek veri
- * kaynağı budur. */
+ * kaynağı budur. "dis" rolündeki dış kullanıcılar, hesaplarına admin
+ * tarafından atanan firmayla sınırlı sonuç alır; admin sınırsız sorgular. */
 export async function searchPassport(input: PassportSearchInput): Promise<PassportResult[]> {
-  await requireExternalAccess();
+  const session = await requireExternalAccess();
 
   const tcNo = (input.tcNo ?? '').trim();
   const ad = (input.ad ?? '').trim().toLocaleLowerCase('tr-TR');
@@ -54,6 +60,19 @@ export async function searchPassport(input: PassportSearchInput): Promise<Passpo
   const firma = (input.firma ?? '').trim().toLocaleLowerCase('tr-TR');
 
   if (!tcNo && !ad && !soyad && !firma) return [];
+  const tooShort = [tcNo, ad, soyad, firma].some(
+    (v) => v.length > 0 && v.length < MIN_QUERY_LENGTH,
+  );
+  if (tooShort) return [];
+
+  // Dış kullanıcı hesabına bir firma atanmışsa (admin panelinden
+  // zorunlu), sorgu sadece o firmadaki personelle sınırlanır — böylece
+  // bir firmanın hesabı başka bir firmanın personelinin T.C. kimlik no
+  // gibi kişisel verilerini göremez.
+  const accountFirma =
+    session.user.role === 'dis' && 'firma' in session.user && typeof session.user.firma === 'string'
+      ? session.user.firma.trim().toLocaleLowerCase('tr-TR')
+      : '';
 
   const [allPersonnel, visibleTrainings, records] = await Promise.all([
     db.select().from(personnel),
@@ -62,6 +81,9 @@ export async function searchPassport(input: PassportSearchInput): Promise<Passpo
   ]);
 
   const matches = allPersonnel.filter((p) => {
+    if (accountFirma && !(p.firma ?? '').toLocaleLowerCase('tr-TR').includes(accountFirma)) {
+      return false;
+    }
     if (tcNo && !(p.tcNo ?? '').includes(tcNo)) return false;
     if (ad && !p.ad.toLocaleLowerCase('tr-TR').includes(ad)) return false;
     if (soyad && !p.soyad.toLocaleLowerCase('tr-TR').includes(soyad)) return false;

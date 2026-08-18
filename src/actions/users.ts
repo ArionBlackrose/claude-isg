@@ -26,6 +26,12 @@ export async function createUser(input: unknown): Promise<ActionResult> {
     return { ok: false, error: 'Bu e-posta adresiyle kayıtlı bir kullanıcı zaten var.' };
   }
 
+  // Dış kullanıcı (Eğitim Pasaportu) hesapları bir firmaya bağlanmadan
+  // oluşturulamaz — aksi halde sorgular tüm firmalar genelinde çalışır.
+  if (parsed.data.role === 'dis' && !parsed.data.firma?.trim()) {
+    return { ok: false, error: 'Dış kullanıcı için firma zorunludur.' };
+  }
+
   const [inserted] = await db
     .insert(user)
     .values({
@@ -34,6 +40,7 @@ export async function createUser(input: unknown): Promise<ActionResult> {
       email: parsed.data.email,
       emailVerified: true,
       role: parsed.data.role,
+      firma: parsed.data.role === 'dis' ? parsed.data.firma || null : null,
     })
     .returning();
 

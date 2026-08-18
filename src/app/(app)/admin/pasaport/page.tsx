@@ -40,7 +40,12 @@ export default async function PasaportAyarlariPage() {
           görür; başka hiçbir sekmeye erişemez.
         </p>
         <ExternalUserPanel
-          users={externalUsers.map((u) => ({ id: u.id, name: u.name, email: u.email }))}
+          users={externalUsers.map((u) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            firma: u.firma,
+          }))}
         />
       </div>
     </div>

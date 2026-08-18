@@ -20,6 +20,14 @@ export const auth = betterAuth({
         defaultValue: 'user',
         input: false,
       },
+      // Sadece "dis" (Eğitim Pasaportu dış kullanıcısı) hesapları için
+      // anlamlı — sorguları bu firmayla sınırlamak için searchPassport
+      // tarafından okunuyor.
+      firma: {
+        type: 'string',
+        required: false,
+        input: false,
+      },
     },
   },
   plugins: [

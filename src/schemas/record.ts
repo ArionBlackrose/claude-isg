@@ -14,7 +14,7 @@ export type RecordInput = z.infer<typeof recordSchema>;
 export const recordUpdateSchema = z.object({
   tarih: z.string().trim().min(1, 'Tarih zorunlu.'),
   sonuc: z.enum(['Başarılı', 'Başarısız', 'Katılmadı']),
-  dosyaNo: z.string().trim().optional(),
+  dosyaNo: z.string().trim().min(1, 'Dosya No zorunlu.'),
   not: z.string().trim().optional(),
 });
 

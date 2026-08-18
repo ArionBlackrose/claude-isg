@@ -16,19 +16,24 @@ import {
 } from '@/components/ui/table';
 import { createUser, updateUserRole } from '@/actions/users';
 
-export type ExternalUserRow = { id: string; name: string; email: string };
+export type ExternalUserRow = { id: string; name: string; email: string; firma: string | null };
 
 export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [firma, setFirma] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    if (!firma.trim()) {
+      toast.error('Firma zorunlu — sorgular sadece bu firmadaki personelle sınırlanır.');
+      return;
+    }
     setIsSubmitting(true);
-    const result = await createUser({ name, email, role: 'dis' });
+    const result = await createUser({ name, email, role: 'dis', firma });
     setIsSubmitting(false);
     if (!result.ok) {
       toast.error(result.error);
@@ -37,6 +42,7 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
     toast.success(`"${name}" için dış kullanıcı erişimi oluşturuldu.`);
     setName('');
     setEmail('');
+    setFirma('');
     router.refresh();
   }
 
@@ -62,7 +68,7 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
     <div className="space-y-4">
       <form
         onSubmit={handleCreate}
-        className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 lg:items-end"
+        className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4 lg:items-end"
       >
         <div className="space-y-1.5">
           <Label htmlFor="dis-name">Ad Soyad</Label>
@@ -84,6 +90,19 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
             required
           />
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="dis-firma">
+            Firma<span className="text-danger"> *</span>
+          </Label>
+          <Input
+            id="dis-firma"
+            maxLength={100}
+            value={firma}
+            onChange={(e) => setFirma(e.target.value)}
+            placeholder="Sorgular bu firmayla sınırlanır"
+            required
+          />
+        </div>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Ekleniyor...' : 'Dış Kullanıcı Ekle'}
         </Button>
@@ -99,6 +118,7 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
             <TableRow>
               <TableHead>Ad Soyad</TableHead>
               <TableHead>E-posta</TableHead>
+              <TableHead>Firma</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -107,6 +127,7 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
               <TableRow key={u.id}>
                 <TableCell>{u.name}</TableCell>
                 <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                <TableCell className="text-muted-foreground">{u.firma || '-'}</TableCell>
                 <TableCell>
                   <Button
                     size="sm"
