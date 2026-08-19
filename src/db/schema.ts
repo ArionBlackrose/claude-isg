@@ -23,6 +23,10 @@ export const personnel = sqliteTable('personnel', {
   durum: text('durum', { enum: ['Güncel', 'Çıkış'] })
     .notNull()
     .default('Güncel'),
+  // Mesleki Yeterlilik Kurumu (MYK) belgesi — personelin varsa yüklediği
+  // sertifika dosyasına ait Google Drive referansı.
+  mykBelgeDriveFileId: text('myk_belge_drive_file_id'),
+  mykBelgeDriveWebViewLink: text('myk_belge_drive_web_view_link'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),

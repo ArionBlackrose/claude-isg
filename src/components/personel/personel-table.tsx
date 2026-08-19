@@ -20,7 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { deletePersonnel } from '@/actions/personnel';
+import {
+  deletePersonnel,
+  deletePersonnelMykBelgesi,
+  uploadPersonnelMykBelgesi,
+} from '@/actions/personnel';
 import { fmtDate } from '@/lib/training-status';
 import { PersonelEditDialog } from './personel-edit-dialog';
 import { PersonelDetayDialog } from './personel-detay-dialog';
@@ -37,6 +41,7 @@ export type PersonelRow = {
   iseGirisTarihi: string | null;
   cikisTarihi: string | null;
   durum: 'Güncel' | 'Çıkış';
+  mykBelgeDriveWebViewLink: string | null;
   history: {
     firma: string | null;
     gorev: string | null;
@@ -81,6 +86,34 @@ export function PersonelTable({
     : null;
   const [editingPersonel, setEditingPersonel] = useState<PersonelRow | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingMykId, setPendingMykId] = useState<string | null>(null);
+
+  async function handleMykUpload(p: PersonelRow, file: File) {
+    setPendingMykId(p.id);
+    const formData = new FormData();
+    formData.set('file', file);
+    const result = await uploadPersonnelMykBelgesi(p.id, formData);
+    setPendingMykId(null);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('MYK belgesi yüklendi.');
+    router.refresh();
+  }
+
+  async function handleMykDelete(p: PersonelRow) {
+    if (!window.confirm('MYK belgesini kaldırmak istediğinize emin misiniz?')) return;
+    setPendingMykId(p.id);
+    const result = await deletePersonnelMykBelgesi(p.id);
+    setPendingMykId(null);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('MYK belgesi kaldırıldı.');
+    router.refresh();
+  }
 
   async function handleDelete(p: PersonelRow) {
     if (
@@ -144,6 +177,7 @@ export function PersonelTable({
               <TableHead>Doğum Tarihi</TableHead>
               <TableHead>İşe Giriş</TableHead>
               <TableHead>Durum</TableHead>
+              <TableHead>MYK Belgesi</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -175,6 +209,42 @@ export function PersonelTable({
                     <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
                       {p.durum}
                     </span>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {p.mykBelgeDriveWebViewLink ? (
+                      <div className="flex items-center gap-2 text-xs">
+                        <a
+                          href={p.mykBelgeDriveWebViewLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Görüntüle
+                        </a>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-danger"
+                          disabled={pendingMykId === p.id}
+                          onClick={() => handleMykDelete(p)}
+                        >
+                          Kaldır
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                        {pendingMykId === p.id ? 'Yükleniyor...' : 'Belge yükle'}
+                        <input
+                          type="file"
+                          className="hidden"
+                          disabled={pendingMykId === p.id}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleMykUpload(p, file);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    )}
                   </TableCell>
                   <TableCell className="space-x-2 whitespace-nowrap">
                     <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>

@@ -9,8 +9,11 @@ import { normName, splitName } from '@/lib/excel';
 import { todayStr } from '@/lib/training-status';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
 import { logActivity, diffSummary } from '@/lib/audit';
+import { deleteCertificate, DriveNotConfiguredError, uploadCertificate } from '@/lib/drive';
 import { personnelSchema } from '@/schemas/personnel';
 import type { ActionResult, CreateResult } from './training';
+
+const MAX_CERTIFICATE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 function revalidatePersonnelPaths() {
   revalidatePath('/personel');
@@ -207,6 +210,88 @@ export async function deletePersonnel(id: string): Promise<ActionResult> {
       `Personel silindi (kayıt ve geçmiş verileri birlikte silindi).`,
     );
   }
+  return { ok: true };
+}
+
+/** Mesleki Yeterlilik Kurumu (MYK) belgesini Google Drive'a yükler ve
+ * personel kaydına bağlar. Eskiden yüklenmiş bir belge varsa önce onu
+ * siler (tek belge tutulur). */
+export async function uploadPersonnelMykBelgesi(
+  personnelId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const session = await requireInternalSession();
+  const file = formData.get('file');
+  if (!(file instanceof File)) {
+    return { ok: false, error: 'Dosya bulunamadı.' };
+  }
+  if (file.size > MAX_CERTIFICATE_SIZE) {
+    return { ok: false, error: 'Dosya boyutu 10 MB sınırını aşıyor.' };
+  }
+
+  const [existing] = await db.select().from(personnel).where(eq(personnel.id, personnelId));
+  if (!existing) {
+    return { ok: false, error: 'Personel bulunamadı.' };
+  }
+
+  try {
+    if (existing.mykBelgeDriveFileId) {
+      await deleteCertificate(existing.mykBelgeDriveFileId).catch(() => {});
+    }
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const { fileId, webViewLink } = await uploadCertificate({
+      fileName: `${personnelId}-myk-${file.name}`,
+      mimeType: file.type || 'application/octet-stream',
+      buffer,
+    });
+    await db
+      .update(personnel)
+      .set({ mykBelgeDriveFileId: fileId, mykBelgeDriveWebViewLink: webViewLink })
+      .where(eq(personnel.id, personnelId));
+  } catch (err) {
+    if (err instanceof DriveNotConfiguredError) {
+      return { ok: false, error: err.message };
+    }
+    return {
+      ok: false,
+      error: `Belge yüklenemedi: ${err instanceof Error ? err.message : 'bilinmeyen hata'}`,
+    };
+  }
+
+  revalidatePersonnelPaths();
+  await logActivity(
+    session,
+    'update',
+    'personel',
+    personnelId,
+    `${existing.ad} ${existing.soyad}`,
+    'MYK belgesi yüklendi.',
+  );
+  return { ok: true };
+}
+
+export async function deletePersonnelMykBelgesi(personnelId: string): Promise<ActionResult> {
+  const session = await requireInternalSession();
+  const [existing] = await db.select().from(personnel).where(eq(personnel.id, personnelId));
+  if (!existing) {
+    return { ok: false, error: 'Personel bulunamadı.' };
+  }
+  if (existing.mykBelgeDriveFileId) {
+    await deleteCertificate(existing.mykBelgeDriveFileId).catch(() => {});
+  }
+  await db
+    .update(personnel)
+    .set({ mykBelgeDriveFileId: null, mykBelgeDriveWebViewLink: null })
+    .where(eq(personnel.id, personnelId));
+  revalidatePersonnelPaths();
+  await logActivity(
+    session,
+    'update',
+    'personel',
+    personnelId,
+    `${existing.ad} ${existing.soyad}`,
+    'MYK belgesi kaldırıldı.',
+  );
   return { ok: true };
 }
 
