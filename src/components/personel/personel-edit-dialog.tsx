@@ -19,6 +19,7 @@ import {
 import { updatePersonnel } from '@/actions/personnel';
 import { personnelSchema, type PersonnelInput, type PersonnelOutput } from '@/schemas/personnel';
 import { todayStr } from '@/lib/training-status';
+import { CALISMA_SEKLI_OPTIONS, DEFAULT_CALISMA_SEKLI } from '@/lib/personnel-constants';
 import type { PersonelRow } from './personel-table';
 
 export function PersonelEditDialog({
@@ -170,14 +171,17 @@ export function PersonelEditDialog({
               <Label htmlFor="edit-calismaSekli">Çalışma Şekli</Label>
               <Select
                 value={watch('calismaSekli')}
-                onValueChange={(v) => setValue('calismaSekli', v ?? 'Tam Zamanlı')}
+                onValueChange={(v) => setValue('calismaSekli', v ?? DEFAULT_CALISMA_SEKLI)}
               >
                 <SelectTrigger id="edit-calismaSekli" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Tam Zamanlı">Tam Zamanlı</SelectItem>
-                  <SelectItem value="Geçici Görev">Geçici Görev</SelectItem>
+                  {CALISMA_SEKLI_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

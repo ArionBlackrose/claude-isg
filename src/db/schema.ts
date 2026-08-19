@@ -82,6 +82,19 @@ export const auditLog = sqliteTable(
   ],
 );
 
+/** Haftalık eğitim durumu özet e-postasının gönderim geçmişi — admin
+ * panelinde "son gönderilen bildirimler" için kullanılır. */
+export const notificationLog = sqliteTable('notification_log', {
+  id: id(),
+  recipients: text('recipients').notNull(),
+  expiredCount: integer('expired_count').notNull().default(0),
+  soonCount: integer('soon_count').notNull().default(0),
+  sent: integer('sent', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
 /** Tek satırlık (singleton) proje bilgisi kaydı — id her zaman 'default'. */
 export const projectSettings = sqliteTable(
   'project_settings',

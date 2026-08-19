@@ -71,6 +71,13 @@
       "when": 1787140322379,
       "tag": "0009_slippery_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1787144214811,
+      "tag": "0010_dashing_namor",
+      "breakpoints": true
     }
   ]
 }

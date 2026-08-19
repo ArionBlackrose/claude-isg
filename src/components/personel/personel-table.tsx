@@ -111,7 +111,12 @@ export function PersonelTable({
     const q = search.trim().toLocaleLowerCase('tr-TR');
     return rows.filter((p) => {
       if (durumFilter !== 'all' && p.durum !== durumFilter) return false;
-      if (q && !`${p.ad} ${p.soyad} ${p.firma ?? ''}`.toLocaleLowerCase('tr-TR').includes(q))
+      if (
+        q &&
+        !`${p.ad} ${p.soyad} ${p.firma ?? ''} ${p.tcNo ?? ''}`
+          .toLocaleLowerCase('tr-TR')
+          .includes(q)
+      )
         return false;
       return true;
     });
@@ -150,7 +155,7 @@ export function PersonelTable({
     <div className="space-y-3.5">
       <div className="flex flex-wrap items-center gap-2.5">
         <Input
-          placeholder="Ad, soyad veya firma ara..."
+          placeholder="Ad, soyad, firma veya TC No ara..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-64"

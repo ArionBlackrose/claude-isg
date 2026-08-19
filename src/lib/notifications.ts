@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { personnel, training, trainingRecord, user } from '@/db/schema';
+import { notificationLog, personnel, training, trainingRecord, user } from '@/db/schema';
 import { statusFor, fmtDate } from '@/lib/training-status';
 import { sendDigestEmail } from '@/lib/mail';
 
@@ -81,7 +81,16 @@ export async function runWeeklyExpiryDigestIfNeeded(): Promise<void> {
   // yine de güncellenir — aksi halde her saatlik kontrolde tekrar tekrar
   // "boş" kontrol yapılır (zararsız ama gereksiz).
   writeLastSentAt(Date.now());
-  if (!expired.length && !soon.length) return;
+  const recipients = admins.map((a) => a.email);
+  if (!expired.length && !soon.length) {
+    await db.insert(notificationLog).values({
+      recipients: recipients.join(', '),
+      expiredCount: 0,
+      soonCount: 0,
+      sent: false,
+    });
+    return;
+  }
 
   const html = `
     <div style="font-family:sans-serif;max-width:640px;margin:0 auto;">
@@ -93,8 +102,15 @@ export async function runWeeklyExpiryDigestIfNeeded(): Promise<void> {
   `;
 
   await sendDigestEmail(
-    admins.map((a) => a.email),
+    recipients,
     `Eğitim Durumu Özeti — ${expired.length} süresi dolmuş, ${soon.length} yaklaşan`,
     html,
   );
+
+  await db.insert(notificationLog).values({
+    recipients: recipients.join(', '),
+    expiredCount: expired.length,
+    soonCount: soon.length,
+    sent: true,
+  });
 }

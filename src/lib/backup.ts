@@ -42,3 +42,19 @@ export async function runDailyBackupIfNeeded(): Promise<void> {
   await sqlite.backup(dest);
   pruneOldBackups();
 }
+
+export type LastBackupInfo = { fileName: string; createdAt: Date; count: number } | null;
+
+/** backups/ klasöründeki en güncel yedek dosyasının bilgisini döner —
+ * admin panelinde "son yedek" göstergesi için kullanılır. */
+export function getLastBackupInfo(): LastBackupInfo {
+  if (!fs.existsSync(BACKUP_DIR)) return null;
+  const files = fs
+    .readdirSync(BACKUP_DIR)
+    .filter((f) => f.endsWith('.db'))
+    .sort();
+  if (!files.length) return null;
+  const fileName = files[files.length - 1];
+  const stat = fs.statSync(path.join(BACKUP_DIR, fileName));
+  return { fileName, createdAt: stat.mtime, count: files.length };
+}

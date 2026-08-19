@@ -49,7 +49,7 @@ const ENTITY_LABELS: Record<AktiviteLog['entityType'], string> = {
   proje: 'Proje',
 };
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 function fmtDateTime(iso: string) {
   const d = new Date(iso);
@@ -68,6 +68,7 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
   const [actionFilter, setActionFilter] = useState('all');
   const [entityFilter, setEntityFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
 
   const userOptions = useMemo(() => {
     const set = new Set(logs.map((l) => l.userName));
@@ -100,8 +101,8 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
     });
   }, [logs, search, userFilter, actionFilter, entityFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   function applyFilter<T>(setter: (v: T) => void) {
     return (v: T) => {
@@ -113,6 +114,7 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
   const handleUserFilter = applyFilter(setUserFilter);
   const handleActionFilter = applyFilter(setActionFilter);
   const handleEntityFilter = applyFilter(setEntityFilter);
+  const handlePageSizeChange = applyFilter(setPageSize);
 
   return (
     <div className="space-y-5">
@@ -243,9 +245,27 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
               </TableBody>
             </Table>
             <div className="mt-2.5 flex items-center justify-between gap-2.5">
-              <span className="text-xs text-muted-foreground">
-                Sayfa {page} / {totalPages}
-              </span>
+              <div className="flex items-center gap-2.5">
+                <span className="text-xs text-muted-foreground">
+                  Sayfa {page} / {totalPages}
+                </span>
+                <span className="text-xs text-muted-foreground">Sayfa başına:</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(v) => handlePageSizeChange(Number(v) || PAGE_SIZE_OPTIONS[0])}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={String(s)}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-center gap-2.5">
                 <Button
                   type="button"
