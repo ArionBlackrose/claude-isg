@@ -24,7 +24,6 @@ import { deletePersonnel } from '@/actions/personnel';
 import { fmtDate } from '@/lib/training-status';
 import { PersonelEditDialog } from './personel-edit-dialog';
 import { PersonelDetayDialog } from './personel-detay-dialog';
-import { MykBelgesiField } from './myk-belgesi-field';
 
 export type PersonelRow = {
   id: string;
@@ -146,7 +145,6 @@ export function PersonelTable({
               <TableHead>Doğum Tarihi</TableHead>
               <TableHead>İşe Giriş</TableHead>
               <TableHead>Durum</TableHead>
-              <TableHead>MYK Belgesi</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -178,14 +176,6 @@ export function PersonelTable({
                     <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
                       {p.durum}
                     </span>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <MykBelgesiField
-                      personnelId={p.id}
-                      webViewLink={p.mykBelgeDriveWebViewLink}
-                      emptyLabel="Belge yükle"
-                      size="sm"
-                    />
                   </TableCell>
                   <TableCell className="space-x-2 whitespace-nowrap">
                     <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
