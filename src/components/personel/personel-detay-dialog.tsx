@@ -187,8 +187,7 @@ export function PersonelDetayDialog({
                     <TableHead>Dosya No</TableHead>
                     <TableHead>Not</TableHead>
                     <TableHead>Sertifika</TableHead>
-                    <TableHead>MYK Belgesi</TableHead>
-                    {isAdmin && <TableHead>Girişi Yapan</TableHead>}
+                    <TableHead>Girişi Yapan</TableHead>
                     {isAdmin && <TableHead />}
                   </TableRow>
                 </TableHeader>
@@ -240,19 +239,7 @@ export function PersonelDetayDialog({
                             />
                           </TableCell>
                           <TableCell className="text-muted-foreground">-</TableCell>
-                          <TableCell>
-                            <MykBelgesiField
-                              personnelId={personnel.id}
-                              webViewLink={personnel.mykBelgeDriveWebViewLink}
-                              emptyLabel="Belge yükle"
-                              size="sm"
-                            />
-                          </TableCell>
-                          {isAdmin && (
-                            <TableCell className="text-muted-foreground">
-                              {r.createdByName}
-                            </TableCell>
-                          )}
+                          <TableCell className="text-muted-foreground">{r.createdByName}</TableCell>
                           <TableCell className="space-x-2 whitespace-nowrap">
                             <Button size="sm" disabled={isPending} onClick={() => saveEdit(r.id)}>
                               Kaydet
@@ -293,17 +280,7 @@ export function PersonelDetayDialog({
                             <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <MykBelgesiField
-                            personnelId={personnel.id}
-                            webViewLink={personnel.mykBelgeDriveWebViewLink}
-                            emptyLabel="Belge yükle"
-                            size="sm"
-                          />
-                        </TableCell>
-                        {isAdmin && (
-                          <TableCell className="text-muted-foreground">{r.createdByName}</TableCell>
-                        )}
+                        <TableCell className="text-muted-foreground">{r.createdByName}</TableCell>
                         {isAdmin && (
                           <TableCell className="space-x-2 whitespace-nowrap">
                             <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
