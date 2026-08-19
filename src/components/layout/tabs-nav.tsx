@@ -10,6 +10,7 @@ const TABS = [
   { href: '/rapor', label: 'Rapor' },
   { href: '/personel', label: 'Personel' },
   { href: '/katalog', label: 'Eğitim Kataloğu' },
+  { href: '/uyari', label: 'Uyarı Eğitimleri' },
 ] as const;
 
 export function TabsNav({ isAdmin }: { isAdmin: boolean }) {

@@ -52,6 +52,7 @@ export type PersonelRow = {
     id: string;
     trainingId: string;
     egitimAdi: string;
+    kategori: string | null;
     tarih: string;
     sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
     dosyaNo: string | null;

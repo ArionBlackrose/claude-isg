@@ -53,7 +53,9 @@ export default async function KayitEklePage() {
             tcNo: p.tcNo,
             firma: p.firma,
           }))}
-          trainings={trainings.map((t) => ({ id: t.id, ad: t.ad }))}
+          trainings={trainings
+            .filter((t) => t.kategori !== 'Uyarı')
+            .map((t) => ({ id: t.id, ad: t.ad }))}
         />
       </div>
 

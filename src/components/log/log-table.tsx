@@ -537,6 +537,7 @@ export function LogTable({
           trainingId={editing.trainingId}
           personName={`${editingPersonel.ad} ${editingPersonel.soyad}`}
           trainingName={editingTraining.ad}
+          trainingKategori={editingTraining.kategori}
           records={records.filter(
             (r) => r.personnelId === editing.personnelId && r.trainingId === editing.trainingId,
           )}

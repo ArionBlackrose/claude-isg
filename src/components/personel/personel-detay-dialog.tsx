@@ -267,7 +267,12 @@ export function PersonelDetayDialog({
                     }
                     return (
                       <TableRow key={r.id}>
-                        <TableCell>{r.egitimAdi}</TableCell>
+                        <TableCell>
+                          {r.egitimAdi}
+                          {r.kategori === 'Uyarı' && (
+                            <span className="tag tag-bad ml-1.5">Uyarı</span>
+                          )}
+                        </TableCell>
                         <TableCell className="font-mono text-muted-foreground">
                           {fmtDate(r.tarih)}
                         </TableCell>

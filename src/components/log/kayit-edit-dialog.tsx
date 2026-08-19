@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -31,6 +32,7 @@ export function KayitEditDialog({
   trainingId,
   personName,
   trainingName,
+  trainingKategori,
   records,
   isAdmin,
 }: {
@@ -40,9 +42,11 @@ export function KayitEditDialog({
   trainingId: string;
   personName: string;
   trainingName: string;
+  trainingKategori: string;
   records: LogRecord[];
   isAdmin: boolean;
 }) {
+  const isUyari = trainingKategori === 'Uyarı';
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<
@@ -256,48 +260,62 @@ export function KayitEditDialog({
               );
             })}
 
-          <div className="pt-1">
-            <p className="mb-2 text-xs font-semibold text-muted-foreground">+ Yeni Kayıt Ekle</p>
-            <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">
-              <div className="space-y-1">
-                <Label>Tarih</Label>
-                <Input type="date" value={newTarih} onChange={(e) => setNewTarih(e.target.value)} />
+          {isUyari ? (
+            <p className="pt-1 text-xs text-muted-foreground">
+              Uyarı eğitimi kayıtları sadece{' '}
+              <Link href="/uyari" className="text-primary hover:underline">
+                Uyarı Eğitimleri
+              </Link>{' '}
+              panelinden eklenebilir.
+            </p>
+          ) : (
+            <div className="pt-1">
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">+ Yeni Kayıt Ekle</p>
+              <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">
+                <div className="space-y-1">
+                  <Label>Tarih</Label>
+                  <Input
+                    type="date"
+                    value={newTarih}
+                    onChange={(e) => setNewTarih(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Sonuç</Label>
+                  <Select
+                    value={newSonuc}
+                    onValueChange={(v) => setNewSonuc((v as typeof newSonuc) ?? 'Başarılı')}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Başarılı">Başarılı</SelectItem>
+                      <SelectItem value="Başarısız">Başarısız</SelectItem>
+                      <SelectItem value="Katılmadı">Katılmadı</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>
+                    Dosya No<span className="text-danger"> *</span>
+                  </Label>
+                  <Input value={newDosyaNo} onChange={(e) => setNewDosyaNo(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label>Not</Label>
+                  <Input
+                    value={newNot}
+                    onChange={(e) => setNewNot(e.target.value)}
+                    placeholder="opsiyonel"
+                  />
+                </div>
+                <Button size="sm" disabled={isAdding} onClick={handleAdd}>
+                  Ekle
+                </Button>
               </div>
-              <div className="space-y-1">
-                <Label>Sonuç</Label>
-                <Select
-                  value={newSonuc}
-                  onValueChange={(v) => setNewSonuc((v as typeof newSonuc) ?? 'Başarılı')}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Başarılı">Başarılı</SelectItem>
-                    <SelectItem value="Başarısız">Başarısız</SelectItem>
-                    <SelectItem value="Katılmadı">Katılmadı</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>
-                  Dosya No<span className="text-danger"> *</span>
-                </Label>
-                <Input value={newDosyaNo} onChange={(e) => setNewDosyaNo(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label>Not</Label>
-                <Input
-                  value={newNot}
-                  onChange={(e) => setNewNot(e.target.value)}
-                  placeholder="opsiyonel"
-                />
-              </div>
-              <Button size="sm" disabled={isAdding} onClick={handleAdd}>
-                Ekle
-              </Button>
             </div>
-          </div>
+          )}
         </div>
       </DialogContent>
       {ConfirmDialog}

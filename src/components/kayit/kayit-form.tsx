@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { createRecords } from '@/actions/records';
+import { createRecords, type RecordsBatchResult } from '@/actions/records';
 import { todayStr } from '@/lib/training-status';
 import { QuickAddPersonnel } from './quick-add-personnel';
 import { QuickAddTraining } from './quick-add-training';
@@ -30,9 +30,13 @@ type TrainingOption = { id: string; ad: string };
 export function KayitForm({
   personnel,
   trainings,
+  submitAction = createRecords,
 }: {
   personnel: PersonelOption[];
   trainings: TrainingOption[];
+  /** Varsayılan olarak genel `createRecords` action'ı kullanılır — Uyarı
+   * Eğitimleri paneli bunun yerine `createUyariRecords`'u geçer. */
+  submitAction?: (input: unknown) => Promise<RecordsBatchResult>;
 }) {
   const router = useRouter();
   const [personList, setPersonList] = useState(personnel);
@@ -93,7 +97,7 @@ export function KayitForm({
       return;
     }
     setIsSubmitting(true);
-    const result = await createRecords({
+    const result = await submitAction({
       personnelIds: Array.from(personnelIds),
       trainingIds: Array.from(trainingIds),
       tarih,

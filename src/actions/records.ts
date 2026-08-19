@@ -40,6 +40,16 @@ export async function createRecord(input: unknown): Promise<ActionResult> {
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
   }
+  const [selectedTraining] = await db
+    .select()
+    .from(training)
+    .where(eq(training.id, parsed.data.trainingId));
+  if (selectedTraining?.kategori === 'Uyarı') {
+    return {
+      ok: false,
+      error: 'Uyarı eğitimi kayıtları sadece Uyarı Eğitimleri panelinden eklenebilir.',
+    };
+  }
   const [inserted] = await db
     .insert(trainingRecord)
     .values({
@@ -67,10 +77,16 @@ export async function createRecord(input: unknown): Promise<ActionResult> {
 
 export type RecordsBatchResult = { ok: true; created: number } | { ok: false; error: string };
 
-/** Secilen her personel x egitim kombinasyonu icin ayri bir kayit olusturur
- * (bir kisiye birden fazla egitim, ya da bir egitimi birden fazla kisiye
- * tek seferde eklemek icin). */
-export async function createRecords(input: unknown): Promise<RecordsBatchResult> {
+/** `createRecords`/`createUyariRecords` arasında paylaşılan asıl toplu ekleme
+ * mantığı. `kategoriGuard` seçilen eğitimlerden hangisinin bu action için
+ * yasak olduğunu belirler — normal panelde Uyarı eğitimleri, Uyarı
+ * panelinde Uyarı DIŞI eğitimler reddedilir; böylece "Uyarı eğitimi
+ * girişleri sadece Uyarı Eğitimleri panelinden yapılabilir" kuralı, hangi
+ * arayüzden çağrıldığından bağımsız olarak sunucu tarafında uygulanır. */
+async function createRecordsInternal(
+  input: unknown,
+  kategoriGuard: (kategori: string) => string | null,
+): Promise<RecordsBatchResult> {
   const session = await requireInternalSession();
   const parsed = recordsBatchSchema.safeParse(input);
   if (!parsed.success) {
@@ -85,7 +101,16 @@ export async function createRecords(input: unknown): Promise<RecordsBatchResult>
     db.select().from(training),
   ]);
   const personById = new Map(personRows.map((p) => [p.id, `${p.ad} ${p.soyad}`]));
-  const trainingById = new Map(trainingRows.map((t) => [t.id, t.ad]));
+  const trainingById = new Map(trainingRows.map((t) => [t.id, t]));
+
+  for (const trainingId of trainingIds) {
+    const t = trainingById.get(trainingId);
+    if (!t) continue;
+    const error = kategoriGuard(t.kategori);
+    if (error) {
+      return { ok: false, error: `"${t.ad}" eğitimi: ${error}` };
+    }
+  }
 
   // better-sqlite3 sürücüsü senkron çalıştığı için db.transaction() içindeki
   // callback async OLAMAZ; bu yüzden insert'ler .get() ile senkron olarak
@@ -117,7 +142,7 @@ export async function createRecords(input: unknown): Promise<RecordsBatchResult>
   }
 
   for (const row of inserted) {
-    const label = `${personById.get(row.personnelId) ?? 'bilinmeyen personel'} — ${trainingById.get(row.trainingId) ?? 'bilinmeyen eğitim'}`;
+    const label = `${personById.get(row.personnelId) ?? 'bilinmeyen personel'} — ${trainingById.get(row.trainingId)?.ad ?? 'bilinmeyen eğitim'}`;
     await logActivity(
       session,
       'create',
@@ -130,6 +155,28 @@ export async function createRecords(input: unknown): Promise<RecordsBatchResult>
 
   revalidateRecordPaths();
   return { ok: true, created: inserted.length };
+}
+
+/** Secilen her personel x egitim kombinasyonu icin ayri bir kayit olusturur
+ * (bir kisiye birden fazla egitim, ya da bir egitimi birden fazla kisiye
+ * tek seferde eklemek icin). Uyarı kategorisindeki eğitimler bu action ile
+ * eklenemez — onlar için `createUyariRecords` kullanılır. */
+export async function createRecords(input: unknown): Promise<RecordsBatchResult> {
+  return createRecordsInternal(input, (kategori) =>
+    kategori === 'Uyarı'
+      ? 'Uyarı eğitimi kayıtları sadece Uyarı Eğitimleri panelinden eklenebilir.'
+      : null,
+  );
+}
+
+/** Uyarı Eğitimleri panelinden çağrılır — sadece kategorisi "Uyarı" olan
+ * eğitimler için kayıt eklenmesine izin verir. */
+export async function createUyariRecords(input: unknown): Promise<RecordsBatchResult> {
+  return createRecordsInternal(input, (kategori) =>
+    kategori !== 'Uyarı'
+      ? 'Uyarı kategorisinde değil; bu panelden sadece Uyarı eğitimleri eklenebilir.'
+      : null,
+  );
 }
 
 export async function updateRecord(id: string, input: unknown): Promise<ActionResult> {
@@ -300,6 +347,14 @@ export async function importRecordsFromExcel(
       trainingMatch = insertedTraining;
       trainingByName.set(normName(egitimAdi), insertedTraining);
       egitimCreated++;
+    }
+
+    if (trainingMatch.kategori === 'Uyarı') {
+      skipped.push({
+        row: rowNo,
+        reason: `"${trainingMatch.ad}" bir Uyarı eğitimi — Excel içe aktarma ile eklenemez, Uyarı Eğitimleri panelini kullanın.`,
+      });
+      continue;
     }
 
     let sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';

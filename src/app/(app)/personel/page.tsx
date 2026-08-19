@@ -31,6 +31,7 @@ export default async function PersonelPage() {
         id: r.id,
         trainingId: r.trainingId,
         egitimAdi: trainingMap.get(r.trainingId)?.ad ?? 'Silinmiş eğitim',
+        kategori: trainingMap.get(r.trainingId)?.kategori ?? null,
         tarih: r.tarih,
         sonuc: r.sonuc,
         dosyaNo: r.dosyaNo,
