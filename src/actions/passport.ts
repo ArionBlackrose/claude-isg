@@ -81,7 +81,7 @@ export async function searchPassport(input: PassportSearchInput): Promise<Passpo
   ]);
 
   const matches = allPersonnel.filter((p) => {
-    if (accountFirma && !(p.firma ?? '').toLocaleLowerCase('tr-TR').includes(accountFirma)) {
+    if (accountFirma && (p.firma ?? '').toLocaleLowerCase('tr-TR') !== accountFirma) {
       return false;
     }
     if (tcNo && !(p.tcNo ?? '').includes(tcNo)) return false;

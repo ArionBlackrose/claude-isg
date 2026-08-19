@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createUser } from '@/actions/users';
-import { createUserSchema, type CreateUserInput } from '@/schemas/user';
+import { createUserSchema, type CreateUserInput, type CreateUserOutput } from '@/schemas/user';
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Yönetici',
@@ -33,12 +33,12 @@ export function UserCreateForm() {
     watch,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<CreateUserInput>({
+  } = useForm<CreateUserInput, unknown, CreateUserOutput>({
     resolver: zodResolver(createUserSchema),
     defaultValues: DEFAULTS,
   });
 
-  async function onSubmit(values: CreateUserInput) {
+  async function onSubmit(values: CreateUserOutput) {
     const result = await createUser(values);
     if (!result.ok) {
       toast.error(result.error);
