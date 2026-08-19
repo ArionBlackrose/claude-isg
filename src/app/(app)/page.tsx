@@ -11,13 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { fmtDate } from '@/lib/training-status';
-
-function tagForSonuc(sonuc: string) {
-  if (sonuc === 'Başarılı') return 'tag-ok';
-  if (sonuc === 'Başarısız') return 'tag-bad';
-  return 'tag-none';
-}
+import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
+import { RESTRICTED_TRAINING_CATEGORY } from '@/lib/training-category-rules';
 
 export default async function KayitEklePage() {
   const [allPersonnel, trainings, recentRecords] = await Promise.all([
@@ -54,8 +49,9 @@ export default async function KayitEklePage() {
             firma: p.firma,
           }))}
           trainings={trainings
-            .filter((t) => t.kategori !== 'Uyarı')
+            .filter((t) => t.kategori !== RESTRICTED_TRAINING_CATEGORY)
             .map((t) => ({ id: t.id, ad: t.ad }))}
+          quickAddExcludeCategories={[RESTRICTED_TRAINING_CATEGORY]}
         />
       </div>
 
@@ -104,7 +100,7 @@ export default async function KayitEklePage() {
                       {t ? t.ad : <span className="text-muted-foreground">silinmiş</span>}
                     </TableCell>
                     <TableCell>
-                      <span className={`tag ${tagForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                      <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>{r.sonuc}</span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{r.dosyaNo || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>

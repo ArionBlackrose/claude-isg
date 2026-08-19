@@ -22,16 +22,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { deleteRecord, updateRecord } from '@/actions/records';
-import { fmtDate } from '@/lib/training-status';
+import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
 import type { PersonelRow } from './personel-table';
 import { MykBelgesiField } from './myk-belgesi-field';
 import { useConfirm } from '@/hooks/use-confirm';
-
-function tagForSonuc(sonuc: string) {
-  if (sonuc === 'Başarılı') return 'tag-ok';
-  if (sonuc === 'Başarısız') return 'tag-bad';
-  return 'tag-none';
-}
 
 export function PersonelDetayDialog({
   personnel,
@@ -120,8 +114,6 @@ export function PersonelDetayDialog({
               webViewLink={personnel.mykBelgeDriveWebViewLink}
               gecerlilikTarihi={personnel.mykBelgeGecerlilikTarihi}
               emptyLabel="Bu personelin MYK belgesi yok — yüklemek için tıklayın"
-              size="md"
-              showGecerlilikInput
             />
           </section>
 
@@ -277,7 +269,7 @@ export function PersonelDetayDialog({
                           {fmtDate(r.tarih)}
                         </TableCell>
                         <TableCell>
-                          <span className={`tag ${tagForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                          <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>{r.sonuc}</span>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{r.dosyaNo || '-'}</TableCell>
                         <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>

@@ -23,6 +23,7 @@ import {
 } from '@/actions/records';
 import { todayStr } from '@/lib/training-status';
 import { useConfirm } from '@/hooks/use-confirm';
+import { RESTRICTED_TRAINING_CATEGORY } from '@/lib/training-category-rules';
 import type { LogRecord } from './log-table';
 
 export function KayitEditDialog({
@@ -46,7 +47,7 @@ export function KayitEditDialog({
   records: LogRecord[];
   isAdmin: boolean;
 }) {
-  const isUyari = trainingKategori === 'Uyarı';
+  const isUyari = trainingKategori === RESTRICTED_TRAINING_CATEGORY;
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<

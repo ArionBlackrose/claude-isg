@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { createUser, updateUserRole } from '@/actions/users';
+import { createUser, updateUserFirma, updateUserRole } from '@/actions/users';
 import { useConfirm } from '@/hooks/use-confirm';
 
 export type ExternalUserRow = { id: string; name: string; email: string; firma: string | null };
@@ -26,7 +26,31 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
   const [firma, setFirma] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [editingFirmaId, setEditingFirmaId] = useState<string | null>(null);
+  const [firmaDraft, setFirmaDraft] = useState('');
   const { confirm, ConfirmDialog } = useConfirm();
+
+  function startEditFirma(u: ExternalUserRow) {
+    setEditingFirmaId(u.id);
+    setFirmaDraft(u.firma ?? '');
+  }
+
+  async function saveFirma(u: ExternalUserRow) {
+    if (!firmaDraft.trim()) {
+      toast.error('Firma zorunlu.');
+      return;
+    }
+    setPendingId(u.id);
+    const result = await updateUserFirma(u.id, firmaDraft);
+    setPendingId(null);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('Firma güncellendi.');
+    setEditingFirmaId(null);
+    router.refresh();
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -131,7 +155,45 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
               <TableRow key={u.id}>
                 <TableCell>{u.name}</TableCell>
                 <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                <TableCell className="text-muted-foreground">{u.firma || '-'}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {editingFirmaId === u.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        className="h-7 w-32 text-xs"
+                        value={firmaDraft}
+                        onChange={(e) => setFirmaDraft(e.target.value)}
+                        maxLength={100}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        disabled={pendingId === u.id}
+                        onClick={() => saveFirma(u)}
+                      >
+                        Kaydet
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={() => setEditingFirmaId(null)}
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span>{u.firma || '-'}</span>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => startEditFirma(u)}
+                      >
+                        Düzenle
+                      </button>
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Button
                     size="sm"

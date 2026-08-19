@@ -24,8 +24,8 @@ import {
 import { deleteTraining, updateTraining } from '@/actions/training';
 import { TRAINING_CATEGORIES, type TrainingInput } from '@/schemas/training';
 import { useConfirm } from '@/hooks/use-confirm';
-
-const PAGE_SIZE_OPTIONS = [25, 50, 100];
+import { usePagination } from '@/hooks/use-pagination';
+import { PaginationBar } from '@/components/ui/pagination-bar';
 
 export type KatalogRow = {
   id: string;
@@ -62,8 +62,6 @@ export function KatalogTable({
   });
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const { confirm, ConfirmDialog } = useConfirm();
 
   const filteredRows = useMemo(() => {
@@ -76,17 +74,11 @@ export function KatalogTable({
     );
   }, [rows, search]);
 
-  function handleSearchChange(value: string) {
-    setSearch(value);
-    setPage(1);
-  }
+  const { page, setPage, pageSize, totalPages, changePageSize, withPageReset } = usePagination(
+    filteredRows.length,
+  );
+  const handleSearchChange = withPageReset(setSearch);
 
-  function handlePageSizeChange(value: number) {
-    setPageSize(value);
-    setPage(1);
-  }
-
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const pagedRows = useMemo(() => {
     const start = (page - 1) * pageSize;
     return filteredRows.slice(start, start + pageSize);
@@ -293,49 +285,13 @@ export function KatalogTable({
         </Table>
       )}
       {filteredRows.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Sayfa başına:</span>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(v) => handlePageSizeChange(Number(v) || PAGE_SIZE_OPTIONS[0])}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZE_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={String(s)}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Önceki
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              Sayfa {page} / {totalPages}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Sonraki
-            </Button>
-          </div>
-        </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={changePageSize}
+        />
       )}
       {ConfirmDialog}
     </div>

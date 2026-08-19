@@ -31,12 +31,18 @@ export function KayitForm({
   personnel,
   trainings,
   submitAction = createRecords,
+  quickAddExcludeCategories,
 }: {
   personnel: PersonelOption[];
   trainings: TrainingOption[];
   /** Varsayılan olarak genel `createRecords` action'ı kullanılır — Uyarı
    * Eğitimleri paneli bunun yerine `createUyariRecords`'u geçer. */
   submitAction?: (input: unknown) => Promise<RecordsBatchResult>;
+  /** "+ Yeni Eğitim Türü" hızlı ekleme formunda seçilemeyecek kategoriler —
+   * ör. Eğitim Ekle sayfası Uyarı'yı hariç tutar, aksi halde burada
+   * oluşturulan bir Uyarı eğitimi otomatik seçilir ama kayıt gönderimi
+   * sunucu tarafında reddedilir. */
+  quickAddExcludeCategories?: string[];
 }) {
   const router = useRouter();
   const [personList, setPersonList] = useState(personnel);
@@ -253,6 +259,7 @@ export function KayitForm({
       )}
       {showAddEgitim && (
         <QuickAddTraining
+          excludeCategories={quickAddExcludeCategories}
           onCreated={(t) => {
             setTrainingList((list) => [...list, t]);
             setTrainingIds((prev) => new Set(prev).add(t.id));

@@ -84,6 +84,39 @@ export async function updateUser(userId: string, input: unknown): Promise<Action
   return { ok: true };
 }
 
+const toUpperTr = (v: string) => v.toLocaleUpperCase('tr-TR');
+
+/** Dış kullanıcı (Eğitim Pasaportu) hesabının firma alanını günceller.
+ * searchPassport artık firma karşılaştırmasını tam eşleşmeyle yapıyor,
+ * bu yüzden yanlış/eksik girilmiş bir firma değerini düzeltmenin tek yolu
+ * bu action — aksi halde hesap sessizce sonuç alamaz hale gelirdi. */
+export async function updateUserFirma(userId: string, firma: string): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const trimmed = firma.trim();
+  if (!trimmed) {
+    return { ok: false, error: 'Firma zorunlu.' };
+  }
+  const [existing] = await db.select().from(user).where(eq(user.id, userId));
+  if (!existing) {
+    return { ok: false, error: 'Kullanıcı bulunamadı.' };
+  }
+  if (existing.role !== 'dis') {
+    return { ok: false, error: 'Firma yalnızca dış kullanıcı hesapları için ayarlanabilir.' };
+  }
+  const nextFirma = toUpperTr(trimmed);
+  await db.update(user).set({ firma: nextFirma }).where(eq(user.id, userId));
+  revalidatePath('/admin/kullanicilar');
+  await logActivity(
+    session,
+    'update',
+    'kullanici',
+    userId,
+    existing.name,
+    `Firma: "${existing.firma ?? '-'}" → "${nextFirma}".`,
+  );
+  return { ok: true };
+}
+
 export async function updateUserRole(
   userId: string,
   role: 'admin' | 'user' | 'dis',

@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
 import { personnel, training, trainingRecord, user } from '@/db/schema';
 import { getSession } from '@/lib/session';
@@ -19,23 +19,33 @@ const UYARI_ESIK = 3;
 const UYARI_PENCERE_AY = -3;
 
 export default async function UyariEgitimleriPage() {
-  const [session, allPersonnel, uyariTrainings, allUsers] = await Promise.all([
+  // Uyarı kategorisindeki eğitim kimlikleri, kayıt sorgusunu DB seviyesinde
+  // daraltmak için önce tek başına çekilir — aksi halde trainingRecord'un
+  // tamamını (tüm kategoriler, tüm personel) çekip istemci tarafında
+  // filtrelemek gerekirdi.
+  const uyariTrainings = await db
+    .select()
+    .from(training)
+    .where(eq(training.kategori, 'Uyarı'))
+    .orderBy(training.ad);
+  const uyariTrainingIds = uyariTrainings.map((t) => t.id);
+
+  const [session, allPersonnel, allUsers, uyariRecords] = await Promise.all([
     getSession(),
     db.select().from(personnel),
-    db.select().from(training).where(eq(training.kategori, 'Uyarı')).orderBy(training.ad),
     db.select().from(user),
+    uyariTrainingIds.length
+      ? db
+          .select()
+          .from(trainingRecord)
+          .where(inArray(trainingRecord.trainingId, uyariTrainingIds))
+          .orderBy(desc(trainingRecord.tarih), desc(trainingRecord.createdAt))
+      : Promise.resolve([]),
   ]);
 
-  const uyariTrainingIds = new Set(uyariTrainings.map((t) => t.id));
   const uyariTrainingMap = new Map(uyariTrainings.map((t) => [t.id, t]));
   const personnelMap = new Map(allPersonnel.map((p) => [p.id, p]));
   const userMap = new Map(allUsers.map((u) => [u.id, u]));
-
-  const allRecords = await db
-    .select()
-    .from(trainingRecord)
-    .orderBy(desc(trainingRecord.tarih), desc(trainingRecord.createdAt));
-  const uyariRecords = allRecords.filter((r) => uyariTrainingIds.has(r.trainingId));
 
   const isAdmin = session?.user.role === 'admin';
 

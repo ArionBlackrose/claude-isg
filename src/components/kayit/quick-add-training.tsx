@@ -17,11 +17,19 @@ import { TRAINING_CATEGORIES, type TrainingInput } from '@/schemas/training';
 
 export function QuickAddTraining({
   onCreated,
+  excludeCategories = [],
 }: {
   onCreated: (t: { id: string; ad: string }) => void;
+  /** Bu panelde kayıt eklenemeyecek kategoriler (ör. Eğitim Ekle sayfasında
+   * Uyarı) — seçilirse eğitim katalog'a eklenir ama kayıt gönderimi sunucu
+   * tarafında reddedilir, bu yüzden seçenekten baştan çıkarılır. */
+  excludeCategories?: string[];
 }) {
+  const categoryOptions = TRAINING_CATEGORIES.filter((k) => !excludeCategories.includes(k));
   const [ad, setAd] = useState('');
-  const [kategori, setKategori] = useState<TrainingInput['kategori']>('Genel');
+  const [kategori, setKategori] = useState<TrainingInput['kategori']>(
+    categoryOptions[0] ?? 'Genel',
+  );
   const [gecerlilikAy, setGecerlilikAy] = useState('');
   const [egitimSuresi, setEgitimSuresi] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,7 +54,7 @@ export function QuickAddTraining({
     toast.success(`"${ad}" eğitim türü eklendi ve seçildi.`);
     onCreated({ id: result.id, ad });
     setAd('');
-    setKategori('Genel');
+    setKategori(categoryOptions[0] ?? 'Genel');
     setGecerlilikAy('');
     setEgitimSuresi('');
   }
@@ -62,13 +70,15 @@ export function QuickAddTraining({
           <Label>Kategori</Label>
           <Select
             value={kategori}
-            onValueChange={(v) => setKategori((v as TrainingInput['kategori']) ?? 'Genel')}
+            onValueChange={(v) =>
+              setKategori((v as TrainingInput['kategori']) ?? categoryOptions[0] ?? 'Genel')
+            }
           >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {TRAINING_CATEGORIES.map((k) => (
+              {categoryOptions.map((k) => (
                 <SelectItem key={k} value={k}>
                   {k}
                 </SelectItem>

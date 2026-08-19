@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { fmtDate } from '@/lib/training-status';
+import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
 import { deleteRecord } from '@/actions/records';
 import { useConfirm } from '@/hooks/use-confirm';
 
@@ -26,12 +26,6 @@ export type UyariRecordRow = {
   not: string | null;
   createdByName: string;
 };
-
-function tagForSonuc(sonuc: string) {
-  if (sonuc === 'Başarılı') return 'tag-ok';
-  if (sonuc === 'Başarısız') return 'tag-bad';
-  return 'tag-none';
-}
 
 export function UyariRecordsTable({
   records,
@@ -92,7 +86,7 @@ export function UyariRecordsTable({
               <TableCell>{r.personelAdi}</TableCell>
               <TableCell>{r.egitimAdi}</TableCell>
               <TableCell>
-                <span className={`tag ${tagForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>{r.sonuc}</span>
               </TableCell>
               <TableCell className="text-muted-foreground">{r.dosyaNo || '-'}</TableCell>
               <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>

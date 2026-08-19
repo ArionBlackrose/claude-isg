@@ -30,6 +30,8 @@ import { addMonths, daysBetween, todayStr, fmtDate, tagClassFor } from '@/lib/tr
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
 import { TRAINING_CATEGORIES } from '@/schemas/training';
 import { KayitEditDialog } from './kayit-edit-dialog';
+import { usePagination } from '@/hooks/use-pagination';
+import { PaginationBar } from '@/components/ui/pagination-bar';
 
 export type LogPersonel = {
   id: string;
@@ -68,8 +70,6 @@ const EGITIM_DURUM_OPTIONS: { value: string; label: string }[] = [
 ];
 const EGITIM_DURUM_LABELS = Object.fromEntries(EGITIM_DURUM_OPTIONS.map((o) => [o.value, o.label]));
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100];
-
 export function LogTable({
   personnel,
   trainings,
@@ -90,8 +90,6 @@ export function LogTable({
   const [egitimDurumFilter, setEgitimDurumFilter] = useState('all');
   const [tarihBaslangic, setTarihBaslangic] = useState('');
   const [tarihBitis, setTarihBitis] = useState('');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const [editing, setEditing] = useState<{ personnelId: string; trainingId: string } | null>(null);
 
   const firmaOptions = useMemo(() => {
@@ -225,24 +223,19 @@ export function LogTable({
     getStatus,
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const { page, setPage, pageSize, totalPages, changePageSize, withPageReset } = usePagination(
+    filtered.length,
+  );
 
-  function updateFilter<T>(setter: (value: T) => void) {
-    return (value: T) => {
-      setter(value);
-      setPage(1);
-    };
-  }
-  const handleSearchChange = updateFilter(setSearch);
-  const handleDurumFilterChange = updateFilter(setDurumFilter);
-  const handleFirmaFilterChange = updateFilter(setFirmaFilter);
-  const handleCalismaSekliFilterChange = updateFilter(setCalismaSekliFilter);
-  const handleKategoriFilterChange = updateFilter(setKategoriFilter);
-  const handleEgitimFilterChange = updateFilter(setEgitimFilter);
-  const handleEgitimDurumFilterChange = updateFilter(setEgitimDurumFilter);
-  const handleTarihBaslangicChange = updateFilter(setTarihBaslangic);
-  const handleTarihBitisChange = updateFilter(setTarihBitis);
-  const handlePageSizeChange = updateFilter(setPageSize);
+  const handleSearchChange = withPageReset(setSearch);
+  const handleDurumFilterChange = withPageReset(setDurumFilter);
+  const handleFirmaFilterChange = withPageReset(setFirmaFilter);
+  const handleCalismaSekliFilterChange = withPageReset(setCalismaSekliFilter);
+  const handleKategoriFilterChange = withPageReset(setKategoriFilter);
+  const handleEgitimFilterChange = withPageReset(setEgitimFilter);
+  const handleEgitimDurumFilterChange = withPageReset(setEgitimDurumFilter);
+  const handleTarihBaslangicChange = withPageReset(setTarihBaslangic);
+  const handleTarihBitisChange = withPageReset(setTarihBitis);
 
   const paged = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -481,49 +474,13 @@ export function LogTable({
               ))}
             </TableBody>
           </Table>
-          <div className="flex flex-wrap items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Sayfa başına:</span>
-              <Select
-                value={String(pageSize)}
-                onValueChange={(v) => handlePageSizeChange(Number(v) || PAGE_SIZE_OPTIONS[0])}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGE_SIZE_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={String(s)}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Önceki
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                Sayfa {page} / {totalPages}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Sonraki
-              </Button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={changePageSize}
+          />
         </>
       )}
 

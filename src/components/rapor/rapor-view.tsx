@@ -23,6 +23,7 @@ import {
   fmtDate,
   todayStr,
   daysInMonth,
+  tagClassForSonuc,
   type TrainingStatusCode,
 } from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
@@ -871,11 +872,5 @@ function tagClassFor(code: TrainingStatusCode) {
   if (code === 'expired') return 'tag-bad';
   if (code === 'soon') return 'tag-warn';
   if (code === 'valid') return 'tag-ok';
-  return 'tag-none';
-}
-
-function tagClassForSonuc(sonuc: string) {
-  if (sonuc === 'Başarılı') return 'tag-ok';
-  if (sonuc === 'Başarısız') return 'tag-bad';
   return 'tag-none';
 }

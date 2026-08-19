@@ -102,3 +102,23 @@ export function tagClassFor(code: TrainingStatusCode): string {
   if (code === 'valid') return 'tag-ok';
   return 'tag-none';
 }
+
+/** Bir tarih+saat değerini "GG.AA.YYYY SS:DD" olarak tr-TR biçiminde döner. */
+export function fmtDateTime(d: Date | string): string {
+  const date = typeof d === 'string' ? new Date(d) : d;
+  return date.toLocaleString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** Bir eğitim kaydının sonuç değerine (Başarılı/Başarısız/Katılmadı)
+ * karşılık gelen rozet (tag) CSS sınıfı. */
+export function tagClassForSonuc(sonuc: string): string {
+  if (sonuc === 'Başarılı') return 'tag-ok';
+  if (sonuc === 'Başarısız') return 'tag-bad';
+  return 'tag-none';
+}

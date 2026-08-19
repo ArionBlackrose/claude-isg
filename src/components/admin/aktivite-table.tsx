@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -18,6 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { fmtDateTime } from '@/lib/training-status';
+import { usePagination } from '@/hooks/use-pagination';
+import { PaginationBar } from '@/components/ui/pagination-bar';
 
 export type AktiviteLog = {
   id: string;
@@ -49,26 +51,11 @@ const ENTITY_LABELS: Record<AktiviteLog['entityType'], string> = {
   proje: 'Proje',
 };
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100];
-
-function fmtDateTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString('tr-TR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
   const [search, setSearch] = useState('');
   const [userFilter, setUserFilter] = useState('all');
   const [actionFilter, setActionFilter] = useState('all');
   const [entityFilter, setEntityFilter] = useState('all');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
 
   const userOptions = useMemo(() => {
     const set = new Set(logs.map((l) => l.userName));
@@ -101,20 +88,15 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
     });
   }, [logs, search, userFilter, actionFilter, entityFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const { page, setPage, pageSize, totalPages, changePageSize, withPageReset } = usePagination(
+    filtered.length,
+  );
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  function applyFilter<T>(setter: (v: T) => void) {
-    return (v: T) => {
-      setter(v);
-      setPage(1);
-    };
-  }
-  const handleSearch = applyFilter(setSearch);
-  const handleUserFilter = applyFilter(setUserFilter);
-  const handleActionFilter = applyFilter(setActionFilter);
-  const handleEntityFilter = applyFilter(setEntityFilter);
-  const handlePageSizeChange = applyFilter(setPageSize);
+  const handleSearch = withPageReset(setSearch);
+  const handleUserFilter = withPageReset(setUserFilter);
+  const handleActionFilter = withPageReset(setActionFilter);
+  const handleEntityFilter = withPageReset(setEntityFilter);
 
   return (
     <div className="space-y-5">
@@ -244,48 +226,14 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
                 ))}
               </TableBody>
             </Table>
-            <div className="mt-2.5 flex items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2.5">
-                <span className="text-xs text-muted-foreground">
-                  Sayfa {page} / {totalPages}
-                </span>
-                <span className="text-xs text-muted-foreground">Sayfa başına:</span>
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(v) => handlePageSizeChange(Number(v) || PAGE_SIZE_OPTIONS[0])}
-                >
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAGE_SIZE_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={String(s)}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Önceki
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Sonraki
-                </Button>
-              </div>
+            <div className="mt-2.5">
+              <PaginationBar
+                page={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={changePageSize}
+              />
             </div>
           </>
         )}

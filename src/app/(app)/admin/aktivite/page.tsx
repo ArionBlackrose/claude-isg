@@ -4,19 +4,10 @@ import { auditLog, notificationLog } from '@/db/schema';
 import { requireAdmin } from '@/lib/session';
 import { AktiviteTable } from '@/components/admin/aktivite-table';
 import { getLastBackupInfo } from '@/lib/backup';
+import { fmtDateTime } from '@/lib/training-status';
 
 const MAX_ROWS = 1000;
 const MAX_NOTIFICATION_ROWS = 10;
-
-function fmtDateTime(d: Date) {
-  return d.toLocaleString('tr-TR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export default async function AktivitePage() {
   await requireAdmin();

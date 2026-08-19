@@ -9,7 +9,7 @@ import {
 import { useConfirm } from '@/hooks/use-confirm';
 
 /** MYK belgesi yükleme/kaldırma işlemlerini tek bir personel için yönetir.
- * personel-table.tsx ve personel-detay-dialog.tsx tarafından ortak kullanılır. */
+ * personel-detay-dialog.tsx tarafından kullanılır. */
 export function useMykBelgesi(personnelId: string) {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
