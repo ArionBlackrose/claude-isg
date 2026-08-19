@@ -1,6 +1,6 @@
 'use server';
 
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { personnel, personnelHistory } from '@/db/schema';
@@ -9,11 +9,14 @@ import { normName, splitName } from '@/lib/excel';
 import { todayStr } from '@/lib/training-status';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
 import { logActivity, diffSummary } from '@/lib/audit';
-import { deleteCertificate, DriveNotConfiguredError, uploadCertificate } from '@/lib/drive';
+import {
+  deleteCertificateIfExists,
+  DriveNotConfiguredError,
+  MAX_CERTIFICATE_SIZE,
+  replaceCertificate,
+} from '@/lib/drive';
 import { personnelSchema } from '@/schemas/personnel';
 import type { ActionResult, CreateResult } from './training';
-
-const MAX_CERTIFICATE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 function revalidatePersonnelPaths() {
   revalidatePath('/personel');
@@ -198,6 +201,9 @@ export async function deletePersonnel(id: string): Promise<ActionResult> {
     return { ok: false, error: 'Personel silme yetkiniz yok.' };
   }
   const [existing] = await db.select().from(personnel).where(eq(personnel.id, id));
+  if (existing?.mykBelgeDriveFileId) {
+    await deleteCertificateIfExists(existing.mykBelgeDriveFileId);
+  }
   await db.delete(personnel).where(eq(personnel.id, id));
   revalidatePersonnelPaths();
   if (existing) {
@@ -234,21 +240,43 @@ export async function uploadPersonnelMykBelgesi(
     return { ok: false, error: 'Personel bulunamadı.' };
   }
 
+  let uploadedFileId: string | null = null;
   try {
-    if (existing.mykBelgeDriveFileId) {
-      await deleteCertificate(existing.mykBelgeDriveFileId).catch(() => {});
-    }
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { fileId, webViewLink } = await uploadCertificate({
+    const { fileId, webViewLink } = await replaceCertificate({
+      existingFileId: existing.mykBelgeDriveFileId,
       fileName: `${personnelId}-myk-${file.name}`,
       mimeType: file.type || 'application/octet-stream',
       buffer,
     });
-    await db
+    uploadedFileId = fileId;
+    // Yükleme ile veritabanı güncellemesi arasındaki bekleme sırasında kayıt
+    // başka bir istek tarafından değiştirilmiş olabilir; bu yüzden güncelleme
+    // yalnızca okuduğumuz mykBelgeDriveFileId hâlâ geçerliyse uygulanır.
+    const updated = await db
       .update(personnel)
       .set({ mykBelgeDriveFileId: fileId, mykBelgeDriveWebViewLink: webViewLink })
-      .where(eq(personnel.id, personnelId));
+      .where(
+        and(
+          eq(personnel.id, personnelId),
+          existing.mykBelgeDriveFileId
+            ? eq(personnel.mykBelgeDriveFileId, existing.mykBelgeDriveFileId)
+            : isNull(personnel.mykBelgeDriveFileId),
+        ),
+      )
+      .returning();
+    if (!updated.length) {
+      await deleteCertificateIfExists(fileId);
+      return {
+        ok: false,
+        error:
+          'Bu personelin MYK belgesi başka bir işlem tarafından değiştirildi. Sayfayı yenileyip tekrar deneyin.',
+      };
+    }
   } catch (err) {
+    if (uploadedFileId) {
+      await deleteCertificateIfExists(uploadedFileId);
+    }
     if (err instanceof DriveNotConfiguredError) {
       return { ok: false, error: err.message };
     }
@@ -277,7 +305,10 @@ export async function deletePersonnelMykBelgesi(personnelId: string): Promise<Ac
     return { ok: false, error: 'Personel bulunamadı.' };
   }
   if (existing.mykBelgeDriveFileId) {
-    await deleteCertificate(existing.mykBelgeDriveFileId).catch(() => {});
+    const result = await deleteCertificateIfExists(existing.mykBelgeDriveFileId);
+    if (!result.ok) {
+      return { ok: false, error: result.error };
+    }
   }
   await db
     .update(personnel)

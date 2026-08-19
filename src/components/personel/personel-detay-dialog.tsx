@@ -22,9 +22,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { deleteRecord, updateRecord } from '@/actions/records';
-import { deletePersonnelMykBelgesi, uploadPersonnelMykBelgesi } from '@/actions/personnel';
 import { fmtDate } from '@/lib/training-status';
 import type { PersonelRow } from './personel-table';
+import { MykBelgesiField } from './myk-belgesi-field';
 
 function tagForSonuc(sonuc: string) {
   if (sonuc === 'Başarılı') return 'tag-ok';
@@ -57,34 +57,6 @@ export function PersonelDetayDialog({
     not: '',
   });
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [isMykPending, setIsMykPending] = useState(false);
-
-  async function handleMykUpload(file: File) {
-    setIsMykPending(true);
-    const formData = new FormData();
-    formData.set('file', file);
-    const result = await uploadPersonnelMykBelgesi(personnel.id, formData);
-    setIsMykPending(false);
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success('MYK belgesi yüklendi.');
-    router.refresh();
-  }
-
-  async function handleMykDelete() {
-    if (!window.confirm('MYK belgesini kaldırmak istediğinize emin misiniz?')) return;
-    setIsMykPending(true);
-    const result = await deletePersonnelMykBelgesi(personnel.id);
-    setIsMykPending(false);
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success('MYK belgesi kaldırıldı.');
-    router.refresh();
-  }
 
   function startEdit(r: PersonelRow['records'][number]) {
     setEditingId(r.id);
@@ -135,42 +107,12 @@ export function PersonelDetayDialog({
             <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               MYK Belgesi
             </h3>
-            {personnel.mykBelgeDriveWebViewLink ? (
-              <div className="flex items-center gap-3 text-sm">
-                <a
-                  href={personnel.mykBelgeDriveWebViewLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  Belgeyi Görüntüle
-                </a>
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground hover:text-danger"
-                  disabled={isMykPending}
-                  onClick={handleMykDelete}
-                >
-                  Kaldır
-                </button>
-              </div>
-            ) : (
-              <label className="inline-block cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-                {isMykPending
-                  ? 'Yükleniyor...'
-                  : 'Bu personelin MYK belgesi yok — yüklemek için tıklayın'}
-                <input
-                  type="file"
-                  className="hidden"
-                  disabled={isMykPending}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleMykUpload(file);
-                    e.target.value = '';
-                  }}
-                />
-              </label>
-            )}
+            <MykBelgesiField
+              personnelId={personnel.id}
+              webViewLink={personnel.mykBelgeDriveWebViewLink}
+              emptyLabel="Bu personelin MYK belgesi yok — yüklemek için tıklayın"
+              size="md"
+            />
           </section>
 
           <section>

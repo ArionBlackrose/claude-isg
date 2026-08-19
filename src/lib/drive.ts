@@ -58,3 +58,57 @@ export async function deleteCertificate(fileId: string): Promise<void> {
   const drive = getDriveClient();
   await drive.files.delete({ fileId });
 }
+
+/** Yüklenecek bir sertifika/belge dosyası için ortak boyut sınırı. */
+export const MAX_CERTIFICATE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+function isNotFoundError(err: unknown): boolean {
+  const code = (err as { code?: number } | null)?.code;
+  return code === 404;
+}
+
+/** Bir Drive dosyasını siler; dosya zaten mevcut değilse (404) bunu
+ * başarı sayar. Başka bir sebeple (izin, ağ, oran sınırı) başarısız
+ * olursa hatayı YUTMAZ — çağıran, veritabanı referansını ancak silme
+ * gerçekten başarılı olduğunda temizlemeli, aksi halde Drive'da hâlâ
+ * duran ama hiçbir yerden erişilemeyen "yetim" dosyalar birikir. */
+export async function deleteCertificateIfExists(
+  fileId: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!fileId) return { ok: true };
+  try {
+    await deleteCertificate(fileId);
+    return { ok: true };
+  } catch (err) {
+    if (isNotFoundError(err)) return { ok: true };
+    return {
+      ok: false,
+      error: `Belge Drive'dan silinemedi: ${err instanceof Error ? err.message : 'bilinmeyen hata'}`,
+    };
+  }
+}
+
+/** Bir sertifika/belgeyi değiştirir: önce yeni dosyayı yükler, sadece
+ * yükleme başarılı olduktan SONRA eski dosyayı (varsa) en iyi çaba ile
+ * siler. Bu sıralama kasıtlı — önce eski dosyayı silip sonra yükleme
+ * başarısız olursa, veritabanı artık var olmayan bir dosyaya işaret
+ * eden "ölü" bir referansta kalırdı. Eski dosyanın silinmesi burada
+ * best-effort'tur çünkü yeni dosya zaten başarıyla yüklenip tek gerçek
+ * referans haline geldi; eski dosyanın silinememesi çağıranın asıl
+ * işlemini bozmamalı. */
+export async function replaceCertificate(input: {
+  existingFileId: string | null;
+  fileName: string;
+  mimeType: string;
+  buffer: Buffer;
+}): Promise<{ fileId: string; webViewLink: string }> {
+  const uploaded = await uploadCertificate({
+    fileName: input.fileName,
+    mimeType: input.mimeType,
+    buffer: input.buffer,
+  });
+  if (input.existingFileId) {
+    await deleteCertificate(input.existingFileId).catch(() => {});
+  }
+  return uploaded;
+}

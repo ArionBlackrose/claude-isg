@@ -8,7 +8,12 @@ import { requireAdmin, requireInternalSession } from '@/lib/session';
 import { normName } from '@/lib/excel';
 import { logActivity, diffSummary } from '@/lib/audit';
 import { recordSchema, recordUpdateSchema, recordsBatchSchema } from '@/schemas/record';
-import { deleteCertificate, DriveNotConfiguredError, uploadCertificate } from '@/lib/drive';
+import {
+  deleteCertificateIfExists,
+  DriveNotConfiguredError,
+  MAX_CERTIFICATE_SIZE,
+  replaceCertificate,
+} from '@/lib/drive';
 import type { ActionResult } from './training';
 
 function revalidateRecordPaths() {
@@ -166,7 +171,7 @@ export async function deleteRecord(id: string): Promise<ActionResult> {
   const session = await requireAdmin();
   const [existing] = await db.select().from(trainingRecord).where(eq(trainingRecord.id, id));
   if (existing?.driveFileId) {
-    await deleteCertificate(existing.driveFileId).catch(() => {});
+    await deleteCertificateIfExists(existing.driveFileId);
   }
   await db.delete(trainingRecord).where(eq(trainingRecord.id, id));
   revalidateRecordPaths();
@@ -183,8 +188,6 @@ export async function deleteRecord(id: string): Promise<ActionResult> {
   }
   return { ok: true };
 }
-
-const MAX_CERTIFICATE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export async function uploadRecordCertificate(
   recordId: string,
@@ -205,11 +208,9 @@ export async function uploadRecordCertificate(
   }
 
   try {
-    if (existing.driveFileId) {
-      await deleteCertificate(existing.driveFileId).catch(() => {});
-    }
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { fileId, webViewLink } = await uploadCertificate({
+    const { fileId, webViewLink } = await replaceCertificate({
+      existingFileId: existing.driveFileId,
       fileName: `${recordId}-${file.name}`,
       mimeType: file.type || 'application/octet-stream',
       buffer,
