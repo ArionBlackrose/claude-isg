@@ -83,6 +83,18 @@ export function statusFor(
   return { code: 'valid', label: last.tarih, tarih: last.tarih };
 }
 
+export type ExpiryStatus = { code: 'expired' | 'soon' | 'valid'; label: string };
+
+/** Bir son kullanma/geçerlilik tarihinin durumunu hesaplar (ör. MYK belgesi
+ * geçerlilik tarihi). Tarih girilmemişse null döner. */
+export function expiryStatus(gecerlilikTarihi: string | null | undefined): ExpiryStatus | null {
+  if (!gecerlilikTarihi) return null;
+  const diff = daysBetween(todayStr(), gecerlilikTarihi);
+  if (diff < 0) return { code: 'expired', label: 'Süresi Doldu' };
+  if (diff <= 30) return { code: 'soon', label: `Yaklaşıyor (${diff}g)` };
+  return { code: 'valid', label: fmtDate(gecerlilikTarihi) };
+}
+
 /** Bir eğitim durum koduna karşılık gelen rozet (tag) CSS sınıfı. */
 export function tagClassFor(code: TrainingStatusCode): string {
   if (code === 'expired') return 'tag-bad';

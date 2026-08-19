@@ -25,6 +25,7 @@ import { deleteRecord, updateRecord } from '@/actions/records';
 import { fmtDate } from '@/lib/training-status';
 import type { PersonelRow } from './personel-table';
 import { MykBelgesiField } from './myk-belgesi-field';
+import { useConfirm } from '@/hooks/use-confirm';
 
 function tagForSonuc(sonuc: string) {
   if (sonuc === 'Başarılı') return 'tag-ok';
@@ -57,6 +58,7 @@ export function PersonelDetayDialog({
     not: '',
   });
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   function startEdit(r: PersonelRow['records'][number]) {
     setEditingId(r.id);
@@ -81,7 +83,13 @@ export function PersonelDetayDialog({
   }
 
   async function handleDelete(r: PersonelRow['records'][number]) {
-    if (!window.confirm('Bu kaydı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.'))
+    if (
+      !(await confirm({
+        description: 'Bu kaydı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+        confirmLabel: 'Sil',
+        destructive: true,
+      }))
+    )
       return;
     setPendingId(r.id);
     const result = await deleteRecord(r.id);
@@ -110,8 +118,10 @@ export function PersonelDetayDialog({
             <MykBelgesiField
               personnelId={personnel.id}
               webViewLink={personnel.mykBelgeDriveWebViewLink}
+              gecerlilikTarihi={personnel.mykBelgeGecerlilikTarihi}
               emptyLabel="Bu personelin MYK belgesi yok — yüklemek için tıklayın"
               size="md"
+              showGecerlilikInput
             />
           </section>
 
@@ -306,6 +316,7 @@ export function PersonelDetayDialog({
           </section>
         </div>
       </DialogContent>
+      {ConfirmDialog}
     </Dialog>
   );
 }

@@ -312,7 +312,11 @@ export async function deletePersonnelMykBelgesi(personnelId: string): Promise<Ac
   }
   await db
     .update(personnel)
-    .set({ mykBelgeDriveFileId: null, mykBelgeDriveWebViewLink: null })
+    .set({
+      mykBelgeDriveFileId: null,
+      mykBelgeDriveWebViewLink: null,
+      mykBelgeGecerlilikTarihi: null,
+    })
     .where(eq(personnel.id, personnelId));
   revalidatePersonnelPaths();
   await logActivity(
@@ -322,6 +326,36 @@ export async function deletePersonnelMykBelgesi(personnelId: string): Promise<Ac
     personnelId,
     `${existing.ad} ${existing.soyad}`,
     'MYK belgesi kaldırıldı.',
+  );
+  return { ok: true };
+}
+
+export async function setMykBelgeGecerlilikTarihi(
+  personnelId: string,
+  gecerlilikTarihi: string | null,
+): Promise<ActionResult> {
+  const session = await requireInternalSession();
+  if (gecerlilikTarihi && Number.isNaN(new Date(`${gecerlilikTarihi}T00:00:00`).getTime())) {
+    return { ok: false, error: 'Geçersiz tarih.' };
+  }
+  const [existing] = await db.select().from(personnel).where(eq(personnel.id, personnelId));
+  if (!existing) {
+    return { ok: false, error: 'Personel bulunamadı.' };
+  }
+  await db
+    .update(personnel)
+    .set({ mykBelgeGecerlilikTarihi: gecerlilikTarihi || null })
+    .where(eq(personnel.id, personnelId));
+  revalidatePersonnelPaths();
+  await logActivity(
+    session,
+    'update',
+    'personel',
+    personnelId,
+    `${existing.ad} ${existing.soyad}`,
+    gecerlilikTarihi
+      ? `MYK belgesi geçerlilik tarihi güncellendi: ${gecerlilikTarihi}.`
+      : 'MYK belgesi geçerlilik tarihi kaldırıldı.',
   );
   return { ok: true };
 }

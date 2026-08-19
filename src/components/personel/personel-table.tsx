@@ -22,8 +22,10 @@ import {
 } from '@/components/ui/table';
 import { deletePersonnel } from '@/actions/personnel';
 import { fmtDate } from '@/lib/training-status';
+import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
 import { PersonelEditDialog } from './personel-edit-dialog';
 import { PersonelDetayDialog } from './personel-detay-dialog';
+import { useConfirm } from '@/hooks/use-confirm';
 
 export type PersonelRow = {
   id: string;
@@ -38,6 +40,7 @@ export type PersonelRow = {
   cikisTarihi: string | null;
   durum: 'Güncel' | 'Çıkış';
   mykBelgeDriveWebViewLink: string | null;
+  mykBelgeGecerlilikTarihi: string | null;
   history: {
     firma: string | null;
     gorev: string | null;
@@ -82,12 +85,15 @@ export function PersonelTable({
     : null;
   const [editingPersonel, setEditingPersonel] = useState<PersonelRow | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   async function handleDelete(p: PersonelRow) {
     if (
-      !window.confirm(
-        `"${p.ad} ${p.soyad}" personelini silmek istediğinize emin misiniz?\n\nBu personele ait eğitim kayıtları ve geçmiş dönemleri de birlikte silinecektir.`,
-      )
+      !(await confirm({
+        description: `"${p.ad} ${p.soyad}" personelini silmek istediğinize emin misiniz?\n\nBu personele ait eğitim kayıtları ve geçmiş dönemleri de birlikte silinecektir.`,
+        confirmLabel: 'Sil',
+        destructive: true,
+      }))
     )
       return;
     setPendingDeleteId(p.id);
@@ -111,9 +117,38 @@ export function PersonelTable({
     });
   }, [rows, search, durumFilter]);
 
+  function handleExport() {
+    const header = [
+      'No',
+      'TC Kimlik No',
+      'Adı Soyadı',
+      'Görevi',
+      'Firması',
+      'Çalışma Şekli',
+      'Doğum Tarihi',
+      'İşe Giriş Tarihi',
+      'Çalışma Durumu',
+    ];
+    const aoa: (string | number)[][] = [header];
+    filtered.forEach((p, i) => {
+      aoa.push([
+        i + 1,
+        p.tcNo || '',
+        `${p.ad} ${p.soyad}`,
+        p.gorev || '',
+        p.firma || '',
+        p.calismaSekli || '',
+        fmtDate(p.dogumTarihi),
+        fmtDate(p.iseGirisTarihi),
+        p.durum,
+      ]);
+    });
+    downloadWorkbook(aoa, 'Personel', `personel-listesi-${todayFileStamp()}.xlsx`);
+  }
+
   return (
     <div className="space-y-3.5">
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-wrap items-center gap-2.5">
         <Input
           placeholder="Ad, soyad veya firma ara..."
           value={search}
@@ -130,6 +165,9 @@ export function PersonelTable({
             <SelectItem value="Çıkış">Çıkış</SelectItem>
           </SelectContent>
         </Select>
+        <Button type="button" variant="outline" size="sm" onClick={handleExport}>
+          Excel İndir (Yedek)
+        </Button>
       </div>
       {!filtered.length ? (
         <div className="p-10 text-center text-muted-foreground">Personel bulunamadı.</div>
@@ -218,6 +256,7 @@ export function PersonelTable({
           isAdmin={isAdmin}
         />
       )}
+      {ConfirmDialog}
     </div>
   );
 }

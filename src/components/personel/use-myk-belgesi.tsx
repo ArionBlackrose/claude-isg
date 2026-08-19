@@ -1,13 +1,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { deletePersonnelMykBelgesi, uploadPersonnelMykBelgesi } from '@/actions/personnel';
+import {
+  deletePersonnelMykBelgesi,
+  setMykBelgeGecerlilikTarihi,
+  uploadPersonnelMykBelgesi,
+} from '@/actions/personnel';
+import { useConfirm } from '@/hooks/use-confirm';
 
 /** MYK belgesi yükleme/kaldırma işlemlerini tek bir personel için yönetir.
  * personel-table.tsx ve personel-detay-dialog.tsx tarafından ortak kullanılır. */
 export function useMykBelgesi(personnelId: string) {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   async function upload(file: File) {
     setIsPending(true);
@@ -24,7 +30,14 @@ export function useMykBelgesi(personnelId: string) {
   }
 
   async function remove() {
-    if (!window.confirm('MYK belgesini kaldırmak istediğinize emin misiniz?')) return;
+    if (
+      !(await confirm({
+        description: 'MYK belgesini kaldırmak istediğinize emin misiniz?',
+        confirmLabel: 'Kaldır',
+        destructive: true,
+      }))
+    )
+      return;
     setIsPending(true);
     const result = await deletePersonnelMykBelgesi(personnelId);
     setIsPending(false);
@@ -36,5 +49,17 @@ export function useMykBelgesi(personnelId: string) {
     router.refresh();
   }
 
-  return { isPending, upload, remove };
+  async function setGecerlilikTarihi(tarih: string | null) {
+    setIsPending(true);
+    const result = await setMykBelgeGecerlilikTarihi(personnelId, tarih);
+    setIsPending(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success('MYK belgesi geçerlilik tarihi güncellendi.');
+    router.refresh();
+  }
+
+  return { isPending, upload, remove, setGecerlilikTarihi, ConfirmDialog };
 }

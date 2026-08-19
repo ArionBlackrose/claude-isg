@@ -15,6 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { createUser, updateUserRole } from '@/actions/users';
+import { useConfirm } from '@/hooks/use-confirm';
 
 export type ExternalUserRow = { id: string; name: string; email: string; firma: string | null };
 
@@ -25,6 +26,7 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
   const [firma, setFirma] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -48,9 +50,11 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
 
   async function handleRevoke(u: ExternalUserRow) {
     if (
-      !window.confirm(
-        `"${u.name}" kullanıcısının Eğitim Pasaportu erişimini kaldırmak istediğinize emin misiniz?`,
-      )
+      !(await confirm({
+        description: `"${u.name}" kullanıcısının Eğitim Pasaportu erişimini kaldırmak istediğinize emin misiniz?`,
+        confirmLabel: 'Erişimi Kaldır',
+        destructive: true,
+      }))
     )
       return;
     setPendingId(u.id);
@@ -144,6 +148,7 @@ export function ExternalUserPanel({ users }: { users: ExternalUserRow[] }) {
           </TableBody>
         </Table>
       )}
+      {ConfirmDialog}
     </div>
   );
 }

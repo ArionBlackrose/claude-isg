@@ -21,6 +21,7 @@ import {
   uploadRecordCertificate,
 } from '@/actions/records';
 import { todayStr } from '@/lib/training-status';
+import { useConfirm } from '@/hooks/use-confirm';
 import type { LogRecord } from './log-table';
 
 export function KayitEditDialog({
@@ -52,6 +53,7 @@ export function KayitEditDialog({
   const [newDosyaNo, setNewDosyaNo] = useState('');
   const [newNot, setNewNot] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   function draftFor(r: LogRecord) {
     return (
@@ -91,7 +93,13 @@ export function KayitEditDialog({
   }
 
   async function handleDelete(r: LogRecord) {
-    if (!window.confirm('Bu kaydı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.'))
+    if (
+      !(await confirm({
+        description: 'Bu kaydı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+        confirmLabel: 'Sil',
+        destructive: true,
+      }))
+    )
       return;
     setPendingId(r.id);
     const result = await deleteRecord(r.id);
@@ -292,6 +300,7 @@ export function KayitEditDialog({
           </div>
         </div>
       </DialogContent>
+      {ConfirmDialog}
     </Dialog>
   );
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `personnel` ADD `myk_belge_gecerlilik_tarihi` text;

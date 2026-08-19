@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/table';
 import { deleteTraining, updateTraining } from '@/actions/training';
 import { TRAINING_CATEGORIES, type TrainingInput } from '@/schemas/training';
+import { useConfirm } from '@/hooks/use-confirm';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
@@ -63,6 +64,7 @@ export function KatalogTable({
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLocaleLowerCase('tr-TR');
@@ -123,7 +125,7 @@ export function KatalogTable({
     const warning = row.recordCount
       ? `"${row.ad}" eğitimini silmek istediğinize emin misiniz?\n\nBu eğitime ait ${row.recordCount} kayıt da birlikte silinecektir.`
       : `"${row.ad}" eğitimini silmek istediğinize emin misiniz?`;
-    if (!window.confirm(warning)) return;
+    if (!(await confirm({ description: warning, confirmLabel: 'Sil', destructive: true }))) return;
     setPendingId(row.id);
     const result = await deleteTraining(row.id);
     setPendingId(null);
@@ -335,6 +337,7 @@ export function KatalogTable({
           </div>
         </div>
       )}
+      {ConfirmDialog}
     </div>
   );
 }
