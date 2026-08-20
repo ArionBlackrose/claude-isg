@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { createRecords, type RecordsBatchResult } from '@/actions/records';
 import { todayStr } from '@/lib/training-status';
+import { isDosyaNoRequired } from '@/lib/training-category-rules';
 import { QuickAddPersonnel } from './quick-add-personnel';
 import { QuickAddTraining } from './quick-add-training';
 
@@ -74,6 +75,8 @@ export function KayitForm({
   const [showAddPersonel, setShowAddPersonel] = useState(false);
   const [showAddEgitim, setShowAddEgitim] = useState(false);
 
+  const dosyaNoRequired = isDosyaNoRequired(mode, sonuc);
+
   const filteredPersonel = useMemo(() => {
     const q = personSearch.trim().toLocaleUpperCase('tr-TR');
     if (!q) return personList;
@@ -111,7 +114,7 @@ export function KayitForm({
       toast.error('Lütfen en az bir personel, en az bir eğitim ve tarih seçin.');
       return;
     }
-    if (!dosyaNo.trim()) {
+    if (dosyaNoRequired && !dosyaNo.trim()) {
       toast.error('Dosya No zorunlu.');
       return;
     }
@@ -253,7 +256,8 @@ export function KayitForm({
         )}
         <div className="space-y-1.5">
           <Label>
-            Dosya No<span className="text-danger"> *</span>
+            Dosya No
+            {dosyaNoRequired && <span className="text-danger"> *</span>}
           </Label>
           <Input
             value={dosyaNo}

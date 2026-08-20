@@ -21,7 +21,7 @@ export const recordSchema = z
     tarih: z.string().trim().min(1, 'Tarih zorunlu.'),
     sonuc: z.enum(['Başarılı', 'Başarısız', 'Katılmadı', 'Katıldı']),
     katilimTarihi: z.string().trim().optional(),
-    dosyaNo: z.string().trim().min(1, 'Dosya No zorunlu.'),
+    dosyaNo: z.string().trim().optional(),
     not: z.string().trim().optional(),
   })
   .superRefine(requireKatilimTarihiWhenKatildi);
@@ -33,7 +33,7 @@ export const recordUpdateSchema = z
     tarih: z.string().trim().min(1, 'Tarih zorunlu.'),
     sonuc: z.enum(['Başarılı', 'Başarısız', 'Katılmadı', 'Katıldı']),
     katilimTarihi: z.string().trim().optional(),
-    dosyaNo: z.string().trim().min(1, 'Dosya No zorunlu.'),
+    dosyaNo: z.string().trim().optional(),
     not: z.string().trim().optional(),
   })
   .superRefine(requireKatilimTarihiWhenKatildi);
@@ -47,7 +47,7 @@ export const recordsBatchSchema = z
     tarih: z.string().trim().min(1, 'Tarih zorunlu.'),
     sonuc: z.enum(['Başarılı', 'Başarısız', 'Katılmadı', 'Katıldı']),
     katilimTarihi: z.string().trim().optional(),
-    dosyaNo: z.string().trim().min(1, 'Dosya No zorunlu.'),
+    dosyaNo: z.string().trim().optional(),
     not: z.string().trim().optional(),
   })
   .superRefine(requireKatilimTarihiWhenKatildi);

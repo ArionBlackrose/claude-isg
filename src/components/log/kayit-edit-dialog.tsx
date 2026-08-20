@@ -23,7 +23,7 @@ import {
 } from '@/actions/records';
 import { todayStr } from '@/lib/training-status';
 import { useConfirm } from '@/hooks/use-confirm';
-import { RESTRICTED_TRAINING_CATEGORY } from '@/lib/training-category-rules';
+import { isDosyaNoRequired, RESTRICTED_TRAINING_CATEGORY } from '@/lib/training-category-rules';
 import type { LogRecord } from './log-table';
 
 export function KayitEditDialog({
@@ -48,6 +48,7 @@ export function KayitEditDialog({
   isAdmin: boolean;
 }) {
   const isUyari = trainingKategori === RESTRICTED_TRAINING_CATEGORY;
+  const mode: 'general' | 'uyari' = isUyari ? 'uyari' : 'general';
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<
@@ -77,7 +78,7 @@ export function KayitEditDialog({
 
   async function handleSave(r: LogRecord) {
     const draft = draftFor(r);
-    if (!draft.dosyaNo.trim()) {
+    if (isDosyaNoRequired(mode, draft.sonuc) && !draft.dosyaNo.trim()) {
       toast.error('Dosya No zorunlu.');
       return;
     }
@@ -241,7 +242,10 @@ export function KayitEditDialog({
                   )}
                   <div className="space-y-1">
                     <Label>
-                      Dosya No<span className="text-danger"> *</span>
+                      Dosya No
+                      {isDosyaNoRequired(mode, draft.sonuc) && (
+                        <span className="text-danger"> *</span>
+                      )}
                     </Label>
                     <Input
                       value={draft.dosyaNo}

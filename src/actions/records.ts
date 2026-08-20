@@ -9,6 +9,7 @@ import { normName } from '@/lib/excel';
 import { logActivity, diffSummary } from '@/lib/audit';
 import { recordSchema, recordUpdateSchema, recordsBatchSchema } from '@/schemas/record';
 import {
+  getDosyaNoError,
   getGeneralCreationError,
   getGeneralSonucError,
   getUyariOnlyCreationError,
@@ -58,6 +59,10 @@ export async function createRecord(input: unknown): Promise<ActionResult> {
   const sonucError = getGeneralSonucError(parsed.data.sonuc);
   if (sonucError) {
     return { ok: false, error: sonucError };
+  }
+  const dosyaNoError = getDosyaNoError('general', parsed.data.sonuc, parsed.data.dosyaNo);
+  if (dosyaNoError) {
+    return { ok: false, error: dosyaNoError };
   }
   const [inserted] = await db
     .insert(trainingRecord)
@@ -111,6 +116,10 @@ async function createRecordsInternal(
   const sonucError = mode === 'uyari' ? getUyariSonucError(sonuc) : getGeneralSonucError(sonuc);
   if (sonucError) {
     return { ok: false, error: sonucError };
+  }
+  const dosyaNoError = getDosyaNoError(mode, sonuc, dosyaNo);
+  if (dosyaNoError) {
+    return { ok: false, error: dosyaNoError };
   }
 
   const [personRows, trainingRows] = await Promise.all([
@@ -216,6 +225,14 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
     : getGeneralSonucError(parsed.data.sonuc);
   if (sonucError) {
     return { ok: false, error: sonucError };
+  }
+  const dosyaNoError = getDosyaNoError(
+    isUyariRecord ? 'uyari' : 'general',
+    parsed.data.sonuc,
+    parsed.data.dosyaNo,
+  );
+  if (dosyaNoError) {
+    return { ok: false, error: dosyaNoError };
   }
   const katilimTarihi =
     parsed.data.sonuc === 'Katıldı' ? (parsed.data.katilimTarihi ?? null) : null;

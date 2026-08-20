@@ -41,3 +41,21 @@ export function getUyariSonucError(sonuc: string): string | null {
 export function getGeneralSonucError(sonuc: string): string | null {
   return sonuc === 'Katıldı' ? '"Katıldı" sonucu sadece Uyarı eğitimlerinde kullanılabilir.' : null;
 }
+
+/** Genel eğitimlerde Dosya No her zaman zorunludur. Uyarı eğitimlerinde ise
+ * personel eğitime gönderildiğinde (henüz katılmadıysa) zorunlu değildir —
+ * ancak "Katıldı" işaretlendiğinde zorunlu hale gelir. Sunucu action'ları
+ * (`getDosyaNoError`) ve client form'ları (zorunluluk yıldızı, buton
+ * doğrulaması) bu tek fonksiyonu paylaşır — kural iki yerde ayrı ayrı
+ * tutulmaz. */
+export function isDosyaNoRequired(mode: 'general' | 'uyari', sonuc: string): boolean {
+  return mode === 'general' || sonuc === 'Katıldı';
+}
+
+export function getDosyaNoError(
+  mode: 'general' | 'uyari',
+  sonuc: string,
+  dosyaNo: string | undefined,
+): string | null {
+  return isDosyaNoRequired(mode, sonuc) && !dosyaNo?.trim() ? 'Dosya No zorunlu.' : null;
+}

@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
+import { isDosyaNoRequired } from '@/lib/training-category-rules';
 import { deleteRecord, updateRecord } from '@/actions/records';
 import { useConfirm } from '@/hooks/use-confirm';
 
@@ -102,7 +103,7 @@ export function UyariRecordsTable({
   }
 
   async function saveEdit(id: string) {
-    if (!draft.dosyaNo.trim()) {
+    if (isDosyaNoRequired('uyari', draft.sonuc) && !draft.dosyaNo.trim()) {
       toast.error('Dosya No zorunlu.');
       return;
     }
@@ -248,7 +249,10 @@ export function UyariRecordsTable({
                       )}
                       <div>
                         <div className="mb-1 text-xs text-muted-foreground">
-                          Dosya No<span className="text-danger"> *</span>
+                          Dosya No
+                          {isDosyaNoRequired('uyari', draft.sonuc) && (
+                            <span className="text-danger"> *</span>
+                          )}
                         </div>
                         <Input
                           value={draft.dosyaNo}
