@@ -9,9 +9,9 @@ export default async function ExternalLayout({ children }: { children: React.Rea
   if (session.user.role !== 'dis' && session.user.role !== 'admin') redirect('/');
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-7">
+    <div className="mx-auto max-w-3xl px-4 py-5 sm:px-5 sm:py-7">
       <Header userName={session.user.name} userEmail={session.user.email} />
-      {children}
+      <main>{children}</main>
     </div>
   );
 }

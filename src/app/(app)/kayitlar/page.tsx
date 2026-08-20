@@ -1,7 +1,10 @@
+import type { Metadata } from 'next';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
 import { getSession } from '@/lib/session';
 import { LogTable } from '@/components/log/log-table';
+
+export const metadata: Metadata = { title: 'Kayıtlar' };
 
 export default async function KayitlarPage() {
   const [session, allPersonnel, trainings, records] = await Promise.all([

@@ -1,5 +1,8 @@
+import type { Metadata } from 'next';
 import { getProjectSettings } from '@/actions/project';
 import { ProjeForm } from '@/components/admin/proje-form';
+
+export const metadata: Metadata = { title: 'Proje Bilgileri' };
 
 export default async function ProjeBilgileriPage() {
   const settings = await getProjectSettings();

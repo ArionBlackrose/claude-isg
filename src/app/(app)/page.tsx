@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { desc } from 'drizzle-orm';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
@@ -13,6 +14,8 @@ import {
 } from '@/components/ui/table';
 import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
 import { RESTRICTED_TRAINING_CATEGORY } from '@/lib/training-category-rules';
+
+export const metadata: Metadata = { title: 'Eğitim Ekle' };
 
 export default async function KayitEklePage() {
   const [allPersonnel, trainings, recentRecords] = await Promise.all([

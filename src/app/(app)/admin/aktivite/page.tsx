@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { desc } from 'drizzle-orm';
 import { db } from '@/db';
 import { auditLog, notificationLog } from '@/db/schema';
@@ -8,6 +9,8 @@ import { fmtDateTime } from '@/lib/training-status';
 
 const MAX_ROWS = 1000;
 const MAX_NOTIFICATION_ROWS = 10;
+
+export const metadata: Metadata = { title: 'Aktivite' };
 
 export default async function AktivitePage() {
   await requireAdmin();

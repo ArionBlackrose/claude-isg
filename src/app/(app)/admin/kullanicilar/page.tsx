@@ -1,8 +1,11 @@
+import type { Metadata } from 'next';
 import { db } from '@/db';
 import { user } from '@/db/schema';
 import { requireAdmin } from '@/lib/session';
 import { UserCreateForm } from '@/components/admin/user-create-form';
 import { UserTable } from '@/components/admin/user-table';
+
+export const metadata: Metadata = { title: 'Kullanıcılar' };
 
 export default async function KullanicilarPage() {
   const session = await requireAdmin();

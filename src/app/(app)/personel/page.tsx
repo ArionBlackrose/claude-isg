@@ -1,9 +1,12 @@
+import type { Metadata } from 'next';
 import { db } from '@/db';
 import { personnel, personnelHistory, training, trainingRecord, user } from '@/db/schema';
 import { canDeletePersonnel, getSession } from '@/lib/session';
 import { PersonelForm } from '@/components/personel/personel-form';
 import { PersonelTable, type PersonelRow } from '@/components/personel/personel-table';
 import { ExcelSyncPersonel } from '@/components/personel/excel-sync-personel';
+
+export const metadata: Metadata = { title: 'Personel' };
 
 export default async function PersonelPage() {
   const [session, allPersonnel, allHistory, allTrainings, allRecords, allUsers] = await Promise.all(

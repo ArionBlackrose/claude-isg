@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
 import { personnel, training, trainingRecord, user } from '@/db/schema';
@@ -17,6 +18,8 @@ import {
 
 const UYARI_ESIK = 3;
 const UYARI_PENCERE_AY = -3;
+
+export const metadata: Metadata = { title: 'Uyarı Eğitimleri' };
 
 export default async function UyariEgitimleriPage() {
   // Uyarı kategorisindeki eğitim kimlikleri, kayıt sorgusunu DB seviyesinde

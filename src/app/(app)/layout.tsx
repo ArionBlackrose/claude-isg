@@ -10,10 +10,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (session.user.role === 'dis') redirect('/pasaport');
 
   return (
-    <div className="mx-auto max-w-[1800px] px-5 py-7">
+    <div className="mx-auto max-w-[1800px] px-4 py-5 sm:px-5 sm:py-7">
       <Header userName={session.user.name} userEmail={session.user.email} />
       <TabsNav isAdmin={session.user.role === 'admin'} />
-      {children}
+      <main>{children}</main>
     </div>
   );
 }

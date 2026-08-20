@@ -1,7 +1,10 @@
+import type { Metadata } from 'next';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
 import { RaporView } from '@/components/rapor/rapor-view';
 import { getProjectSettings } from '@/actions/project';
+
+export const metadata: Metadata = { title: 'Rapor' };
 
 export default async function RaporPage({
   searchParams,

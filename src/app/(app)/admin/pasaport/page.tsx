@@ -1,8 +1,11 @@
+import type { Metadata } from 'next';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { training, user } from '@/db/schema';
 import { PasaportTrainingSelect } from '@/components/admin/pasaport-training-select';
 import { ExternalUserPanel } from '@/components/admin/external-user-panel';
+
+export const metadata: Metadata = { title: 'Eğitim Pasaportu Ayarları' };
 
 export default async function PasaportAyarlariPage() {
   const [trainings, externalUsers] = await Promise.all([
