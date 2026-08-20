@@ -112,7 +112,8 @@ export default async function UyariEgitimleriPage() {
       personelAdi: p ? `${p.ad} ${p.soyad}` : 'silinmiş personel',
       egitimAdi: uyariTrainingMap.get(r.trainingId)?.ad ?? 'silinmiş eğitim',
       tarih: r.tarih,
-      sonuc: r.sonuc,
+      sonuc: r.sonuc as 'Katılmadı' | 'Katıldı',
+      katilimTarihi: r.katilimTarihi,
       dosyaNo: r.dosyaNo,
       not: r.not,
       createdByName: r.createdByUserId
@@ -159,6 +160,8 @@ export default async function UyariEgitimleriPage() {
             }))}
             trainings={uyariTrainings.map((t) => ({ id: t.id, ad: t.ad }))}
             submitAction={createUyariRecords}
+            hideQuickAdd
+            mode="uyari"
           />
         )}
       </div>

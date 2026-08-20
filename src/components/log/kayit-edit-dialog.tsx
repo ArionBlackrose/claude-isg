@@ -51,7 +51,10 @@ export function KayitEditDialog({
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<
-    Record<string, { tarih: string; sonuc: string; dosyaNo: string; not: string }>
+    Record<
+      string,
+      { tarih: string; sonuc: string; katilimTarihi: string; dosyaNo: string; not: string }
+    >
   >({});
   const [newTarih, setNewTarih] = useState(todayStr());
   const [newSonuc, setNewSonuc] = useState<'Başarılı' | 'Başarısız' | 'Katılmadı'>('Başarılı');
@@ -62,7 +65,13 @@ export function KayitEditDialog({
 
   function draftFor(r: LogRecord) {
     return (
-      drafts[r.id] ?? { tarih: r.tarih, sonuc: r.sonuc, dosyaNo: r.dosyaNo ?? '', not: r.not ?? '' }
+      drafts[r.id] ?? {
+        tarih: r.tarih,
+        sonuc: r.sonuc,
+        katilimTarihi: r.katilimTarihi ?? '',
+        dosyaNo: r.dosyaNo ?? '',
+        not: r.not ?? '',
+      }
     );
   }
 
@@ -70,6 +79,10 @@ export function KayitEditDialog({
     const draft = draftFor(r);
     if (!draft.dosyaNo.trim()) {
       toast.error('Dosya No zorunlu.');
+      return;
+    }
+    if (draft.sonuc === 'Katıldı' && !draft.katilimTarihi) {
+      toast.error('Katılım tarihi zorunlu.');
       return;
     }
     setPendingId(r.id);
@@ -163,25 +176,28 @@ export function KayitEditDialog({
             .sort((a, b) => b.tarih.localeCompare(a.tarih))
             .map((r) => {
               const draft = draftFor(r);
+              const readOnly = isUyari && !isAdmin;
               return (
                 <div
                   key={r.id}
                   className="grid grid-cols-1 items-end gap-2 border-b border-border pb-3 sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto_auto]"
                 >
                   <div className="space-y-1">
-                    <Label>Tarih</Label>
+                    <Label>{isUyari ? 'Gönderildiği Tarih' : 'Tarih'}</Label>
                     <Input
                       type="date"
                       value={draft.tarih}
+                      disabled={readOnly}
                       onChange={(e) =>
                         setDrafts((d) => ({ ...d, [r.id]: { ...draft, tarih: e.target.value } }))
                       }
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label>Sonuç</Label>
+                    <Label>{isUyari ? 'Katılım Durumu' : 'Sonuç'}</Label>
                     <Select
                       value={draft.sonuc}
+                      disabled={readOnly}
                       onValueChange={(v) =>
                         setDrafts((d) => ({ ...d, [r.id]: { ...draft, sonuc: v ?? draft.sonuc } }))
                       }
@@ -190,18 +206,46 @@ export function KayitEditDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Başarılı">Başarılı</SelectItem>
-                        <SelectItem value="Başarısız">Başarısız</SelectItem>
-                        <SelectItem value="Katılmadı">Katılmadı</SelectItem>
+                        {isUyari ? (
+                          <>
+                            <SelectItem value="Katılmadı">Katılmadı</SelectItem>
+                            <SelectItem value="Katıldı">Katıldı</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="Başarılı">Başarılı</SelectItem>
+                            <SelectItem value="Başarısız">Başarısız</SelectItem>
+                            <SelectItem value="Katılmadı">Katılmadı</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
+                  {isUyari && draft.sonuc === 'Katıldı' && (
+                    <div className="space-y-1">
+                      <Label>
+                        Katılım Tarihi<span className="text-danger"> *</span>
+                      </Label>
+                      <Input
+                        type="date"
+                        value={draft.katilimTarihi}
+                        disabled={readOnly}
+                        onChange={(e) =>
+                          setDrafts((d) => ({
+                            ...d,
+                            [r.id]: { ...draft, katilimTarihi: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+                  )}
                   <div className="space-y-1">
                     <Label>
                       Dosya No<span className="text-danger"> *</span>
                     </Label>
                     <Input
                       value={draft.dosyaNo}
+                      disabled={readOnly}
                       onChange={(e) =>
                         setDrafts((d) => ({ ...d, [r.id]: { ...draft, dosyaNo: e.target.value } }))
                       }
@@ -211,14 +255,17 @@ export function KayitEditDialog({
                     <Label>Not</Label>
                     <Input
                       value={draft.not}
+                      disabled={readOnly}
                       onChange={(e) =>
                         setDrafts((d) => ({ ...d, [r.id]: { ...draft, not: e.target.value } }))
                       }
                     />
                   </div>
-                  <Button size="sm" disabled={pendingId === r.id} onClick={() => handleSave(r)}>
-                    Kaydet
-                  </Button>
+                  {(!isUyari || isAdmin) && (
+                    <Button size="sm" disabled={pendingId === r.id} onClick={() => handleSave(r)}>
+                      Kaydet
+                    </Button>
+                  )}
                   {isAdmin && (
                     <Button
                       size="sm"

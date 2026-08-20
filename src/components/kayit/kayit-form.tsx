@@ -32,6 +32,8 @@ export function KayitForm({
   trainings,
   submitAction = createRecords,
   quickAddExcludeCategories,
+  hideQuickAdd = false,
+  mode = 'general',
 }: {
   personnel: PersonelOption[];
   trainings: TrainingOption[];
@@ -43,6 +45,14 @@ export function KayitForm({
    * oluşturulan bir Uyarı eğitimi otomatik seçilir ama kayıt gönderimi
    * sunucu tarafında reddedilir. */
   quickAddExcludeCategories?: string[];
+  /** "+ Yeni Personel" / "+ Yeni Eğitim Türü" hızlı ekleme butonlarını
+   * gizler — Uyarı Eğitimleri paneli bu formu sadece mevcut personel/eğitim
+   * türleriyle sınırlı tutmak için kullanır. */
+  hideQuickAdd?: boolean;
+  /** "uyari" modunda Sonuç seçenekleri Katıldı/Katılmadı olur, Tarih alanı
+   * "gönderildiği tarih" olarak etiketlenir ve Katıldı seçildiğinde ayrı bir
+   * "Katılım Tarihi" alanı zorunlu hale gelir. */
+  mode?: 'general' | 'uyari';
 }) {
   const router = useRouter();
   const [personList, setPersonList] = useState(personnel);
@@ -53,7 +63,10 @@ export function KayitForm({
   const [personnelIds, setPersonnelIds] = useState<Set<string>>(new Set());
   const [trainingIds, setTrainingIds] = useState<Set<string>>(new Set());
   const [tarih, setTarih] = useState(todayStr());
-  const [sonuc, setSonuc] = useState<'Başarılı' | 'Başarısız' | 'Katılmadı'>('Başarılı');
+  const [sonuc, setSonuc] = useState<'Başarılı' | 'Başarısız' | 'Katılmadı' | 'Katıldı'>(
+    mode === 'uyari' ? 'Katılmadı' : 'Başarılı',
+  );
+  const [katilimTarihi, setKatilimTarihi] = useState(todayStr());
   const [dosyaNo, setDosyaNo] = useState('');
   const [not, setNot] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,12 +115,17 @@ export function KayitForm({
       toast.error('Dosya No zorunlu.');
       return;
     }
+    if (sonuc === 'Katıldı' && !katilimTarihi) {
+      toast.error('Katılım tarihi zorunlu.');
+      return;
+    }
     setIsSubmitting(true);
     const result = await submitAction({
       personnelIds: Array.from(personnelIds),
       trainingIds: Array.from(trainingIds),
       tarih,
       sonuc,
+      katilimTarihi: sonuc === 'Katıldı' ? katilimTarihi : undefined,
       dosyaNo,
       not,
     });
@@ -191,22 +209,48 @@ export function KayitForm({
       </div>
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5">
-          <Label>Tarih</Label>
+          <Label>{mode === 'uyari' ? 'Gönderildiği Tarih' : 'Tarih'}</Label>
           <Input type="date" value={tarih} onChange={(e) => setTarih(e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Sonuç</Label>
-          <Select value={sonuc} onValueChange={(v) => setSonuc((v as typeof sonuc) ?? 'Başarılı')}>
+          <Label>{mode === 'uyari' ? 'Katılım Durumu' : 'Sonuç'}</Label>
+          <Select
+            value={sonuc}
+            onValueChange={(v) =>
+              setSonuc((v as typeof sonuc) ?? (mode === 'uyari' ? 'Katılmadı' : 'Başarılı'))
+            }
+          >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Başarılı">Başarılı</SelectItem>
-              <SelectItem value="Başarısız">Başarısız</SelectItem>
-              <SelectItem value="Katılmadı">Katılmadı</SelectItem>
+              {mode === 'uyari' ? (
+                <>
+                  <SelectItem value="Katılmadı">Katılmadı</SelectItem>
+                  <SelectItem value="Katıldı">Katıldı</SelectItem>
+                </>
+              ) : (
+                <>
+                  <SelectItem value="Başarılı">Başarılı</SelectItem>
+                  <SelectItem value="Başarısız">Başarısız</SelectItem>
+                  <SelectItem value="Katılmadı">Katılmadı</SelectItem>
+                </>
+              )}
             </SelectContent>
           </Select>
         </div>
+        {mode === 'uyari' && sonuc === 'Katıldı' && (
+          <div className="space-y-1.5">
+            <Label>
+              Katılım Tarihi<span className="text-danger"> *</span>
+            </Label>
+            <Input
+              type="date"
+              value={katilimTarihi}
+              onChange={(e) => setKatilimTarihi(e.target.value)}
+            />
+          </div>
+        )}
         <div className="space-y-1.5">
           <Label>
             Dosya No<span className="text-danger"> *</span>
@@ -230,25 +274,29 @@ export function KayitForm({
         <Button type="button" disabled={isSubmitting} onClick={handleSubmit}>
           {isSubmitting ? 'Kaydediliyor...' : 'Kayıtları Ekle'}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAddPersonel((v) => !v)}
-        >
-          + Yeni Personel
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAddEgitim((v) => !v)}
-        >
-          + Yeni Eğitim Türü
-        </Button>
+        {!hideQuickAdd && (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAddPersonel((v) => !v)}
+            >
+              + Yeni Personel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAddEgitim((v) => !v)}
+            >
+              + Yeni Eğitim Türü
+            </Button>
+          </>
+        )}
       </div>
 
-      {showAddPersonel && (
+      {!hideQuickAdd && showAddPersonel && (
         <QuickAddPersonnel
           onCreated={(p) => {
             setPersonList((list) => [...list, p]);
@@ -257,7 +305,7 @@ export function KayitForm({
           }}
         />
       )}
-      {showAddEgitim && (
+      {!hideQuickAdd && showAddEgitim && (
         <QuickAddTraining
           excludeCategories={quickAddExcludeCategories}
           onCreated={(t) => {

@@ -153,8 +153,15 @@ export const trainingRecord = sqliteTable('training_record', {
   trainingId: text('training_id')
     .notNull()
     .references(() => training.id, { onDelete: 'cascade' }),
+  // Uyarı eğitimleri için: personelin eğitime gönderildiği tarih — kayıt
+  // oluşturulurken zorunlu girilir. Genel eğitimlerde bu, eğitimin
+  // gerçekleştiği tarihtir.
   tarih: text('tarih').notNull(),
-  sonuc: text('sonuc', { enum: ['Başarılı', 'Başarısız', 'Katılmadı'] }).notNull(),
+  sonuc: text('sonuc', { enum: ['Başarılı', 'Başarısız', 'Katılmadı', 'Katıldı'] }).notNull(),
+  // Uyarı eğitimleri için: personel eğitime fiilen katıldığında zorunlu
+  // girilen tarih — `tarih` (gönderilme tarihi) alanından ayrı tutulur.
+  // Genel eğitimlerde kullanılmaz.
+  katilimTarihi: text('katilim_tarihi'),
   dosyaNo: text('dosya_no'),
   not: text('not'),
   driveFileId: text('drive_file_id'),

@@ -5,7 +5,7 @@ export type AdamSaatRecordLike = {
   personnelId: string;
   trainingId: string;
   tarih: string;
-  sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
+  sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı' | 'Katıldı';
 };
 
 export type AdamSaatTrainingLike = {

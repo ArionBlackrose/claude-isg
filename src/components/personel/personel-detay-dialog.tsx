@@ -126,7 +126,6 @@ export function PersonelDetayDialog({
                   <TableRow>
                     <TableHead>Eğitim</TableHead>
                     <TableHead>Tarih</TableHead>
-                    <TableHead>Sonuç</TableHead>
                     <TableHead>Not</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -134,11 +133,14 @@ export function PersonelDetayDialog({
                   {uyariRecords.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell>{r.egitimAdi}</TableCell>
-                      <TableCell className="font-mono text-muted-foreground">
-                        {fmtDate(r.tarih)}
-                      </TableCell>
                       <TableCell>
-                        <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                        {r.sonuc === 'Katıldı' ? (
+                          <span className="font-mono text-muted-foreground">
+                            {fmtDate(r.katilimTarihi)}
+                          </span>
+                        ) : (
+                          <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>Katılmadı</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
                     </TableRow>

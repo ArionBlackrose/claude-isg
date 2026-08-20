@@ -8,7 +8,13 @@ import { requireAdmin, requireInternalSession } from '@/lib/session';
 import { normName } from '@/lib/excel';
 import { logActivity, diffSummary } from '@/lib/audit';
 import { recordSchema, recordUpdateSchema, recordsBatchSchema } from '@/schemas/record';
-import { getGeneralCreationError, getUyariOnlyCreationError } from '@/lib/training-category-rules';
+import {
+  getGeneralCreationError,
+  getGeneralSonucError,
+  getUyariOnlyCreationError,
+  getUyariSonucError,
+  RESTRICTED_TRAINING_CATEGORY,
+} from '@/lib/training-category-rules';
 import {
   deleteCertificateIfExists,
   DriveNotConfiguredError,
@@ -49,6 +55,10 @@ export async function createRecord(input: unknown): Promise<ActionResult> {
   if (kategoriError) {
     return { ok: false, error: kategoriError };
   }
+  const sonucError = getGeneralSonucError(parsed.data.sonuc);
+  if (sonucError) {
+    return { ok: false, error: sonucError };
+  }
   const [inserted] = await db
     .insert(trainingRecord)
     .values({
@@ -56,6 +66,7 @@ export async function createRecord(input: unknown): Promise<ActionResult> {
       trainingId: parsed.data.trainingId,
       tarih: parsed.data.tarih,
       sonuc: parsed.data.sonuc,
+      katilimTarihi: parsed.data.sonuc === 'Katıldı' ? (parsed.data.katilimTarihi ?? null) : null,
       dosyaNo: parsed.data.dosyaNo || null,
       not: parsed.data.not || null,
       createdByUserId: session.user.id,
@@ -93,9 +104,14 @@ async function createRecordsInternal(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
   }
-  const { tarih, sonuc, dosyaNo, not } = parsed.data;
+  const { tarih, sonuc, katilimTarihi, dosyaNo, not } = parsed.data;
   const personnelIds = Array.from(new Set(parsed.data.personnelIds));
   const trainingIds = Array.from(new Set(parsed.data.trainingIds));
+
+  const sonucError = mode === 'uyari' ? getUyariSonucError(sonuc) : getGeneralSonucError(sonuc);
+  if (sonucError) {
+    return { ok: false, error: sonucError };
+  }
 
   const [personRows, trainingRows] = await Promise.all([
     db.select().from(personnel),
@@ -115,6 +131,8 @@ async function createRecordsInternal(
     }
   }
 
+  const resolvedKatilimTarihi = sonuc === 'Katıldı' ? (katilimTarihi ?? null) : null;
+
   // better-sqlite3 sürücüsü senkron çalıştığı için db.transaction() içindeki
   // callback async OLAMAZ; bu yüzden insert'ler .get() ile senkron olarak
   // yapılır, tüm kombinasyonlar ya birlikte yazılır ya da hiçbiri yazılmaz.
@@ -130,6 +148,7 @@ async function createRecordsInternal(
               trainingId,
               tarih,
               sonuc,
+              katilimTarihi: resolvedKatilimTarihi,
               dosyaNo: dosyaNo || null,
               not: not || null,
               createdByUserId: session.user.id,
@@ -184,11 +203,28 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
   if (!existing) {
     return { ok: false, error: 'Kayıt bulunamadı.' };
   }
+  const [existingTraining] = await db
+    .select()
+    .from(training)
+    .where(eq(training.id, existing.trainingId));
+  const isUyariRecord = existingTraining?.kategori === RESTRICTED_TRAINING_CATEGORY;
+  if (isUyariRecord && session.user.role !== 'admin') {
+    return { ok: false, error: 'Uyarı eğitimi kayıtlarını sadece admin düzenleyebilir.' };
+  }
+  const sonucError = isUyariRecord
+    ? getUyariSonucError(parsed.data.sonuc)
+    : getGeneralSonucError(parsed.data.sonuc);
+  if (sonucError) {
+    return { ok: false, error: sonucError };
+  }
+  const katilimTarihi =
+    parsed.data.sonuc === 'Katıldı' ? (parsed.data.katilimTarihi ?? null) : null;
   await db
     .update(trainingRecord)
     .set({
       tarih: parsed.data.tarih,
       sonuc: parsed.data.sonuc,
+      katilimTarihi,
       dosyaNo: parsed.data.dosyaNo || null,
       not: parsed.data.not || null,
     })
@@ -200,10 +236,17 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
     {
       tarih: parsed.data.tarih,
       sonuc: parsed.data.sonuc,
+      katilimTarihi,
       dosyaNo: parsed.data.dosyaNo || null,
       not: parsed.data.not || null,
     },
-    { tarih: 'Tarih', sonuc: 'Sonuç', dosyaNo: 'Dosya No', not: 'Not' },
+    {
+      tarih: 'Tarih',
+      sonuc: 'Sonuç',
+      katilimTarihi: 'Katılım Tarihi',
+      dosyaNo: 'Dosya No',
+      not: 'Not',
+    },
   );
   await logActivity(session, 'update', 'kayit', id, label, summary);
   return { ok: true };

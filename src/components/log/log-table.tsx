@@ -50,7 +50,8 @@ export type LogRecord = {
   personnelId: string;
   trainingId: string;
   tarih: string;
-  sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
+  sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı' | 'Katıldı';
+  katilimTarihi: string | null;
   dosyaNo: string | null;
   not: string | null;
   driveWebViewLink: string | null;

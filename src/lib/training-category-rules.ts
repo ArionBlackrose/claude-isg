@@ -27,3 +27,17 @@ export function getUyariOnlyCreationError(kategori: string | undefined): string 
   if (kategori === undefined) return 'Eğitim bulunamadı.';
   return kategori !== RESTRICTED_TRAINING_CATEGORY ? UYARI_ONLY_REJECTION_MESSAGE : null;
 }
+
+/** Uyarı eğitimlerinde "sonuç" katılım durumunu ifade eder (Katıldı/Katılmadı)
+ * — Başarılı/Başarısız genel eğitimlere özgüdür ve Uyarı kaydında anlamsızdır. */
+export const UYARI_SONUC_VALUES = ['Katıldı', 'Katılmadı'] as const;
+
+export function getUyariSonucError(sonuc: string): string | null {
+  return (UYARI_SONUC_VALUES as readonly string[]).includes(sonuc)
+    ? null
+    : 'Uyarı eğitimi sonucu sadece "Katıldı" veya "Katılmadı" olabilir.';
+}
+
+export function getGeneralSonucError(sonuc: string): string | null {
+  return sonuc === 'Katıldı' ? '"Katıldı" sonucu sadece Uyarı eğitimlerinde kullanılabilir.' : null;
+}

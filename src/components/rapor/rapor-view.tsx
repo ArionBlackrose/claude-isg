@@ -73,7 +73,7 @@ type Rec = {
   personnelId: string;
   trainingId: string;
   tarih: string;
-  sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
+  sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı' | 'Katıldı';
 };
 
 const DURUM_OPTIONS: { value: string; label: string }[] = [

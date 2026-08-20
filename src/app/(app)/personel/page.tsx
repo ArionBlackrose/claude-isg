@@ -56,6 +56,7 @@ export default async function PersonelPage() {
           kategori: trainingMap.get(r.trainingId)?.kategori ?? null,
           tarih: r.tarih,
           sonuc: r.sonuc,
+          katilimTarihi: r.katilimTarihi,
           dosyaNo: r.dosyaNo,
           not: r.not,
           driveWebViewLink: r.driveWebViewLink,

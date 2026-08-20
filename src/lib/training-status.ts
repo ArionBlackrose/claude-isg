@@ -2,7 +2,7 @@ export type TrainingRecordLike = {
   personnelId: string;
   trainingId: string;
   tarih: string;
-  sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı';
+  sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı' | 'Katıldı';
 };
 
 export type TrainingLike = {
@@ -142,7 +142,7 @@ export function fmtDateTime(d: Date | string): string {
 /** Bir eğitim kaydının sonuç değerine (Başarılı/Başarısız/Katılmadı)
  * karşılık gelen rozet (tag) CSS sınıfı. */
 export function tagClassForSonuc(sonuc: string): string {
-  if (sonuc === 'Başarılı') return 'tag-ok';
+  if (sonuc === 'Başarılı' || sonuc === 'Katıldı') return 'tag-ok';
   if (sonuc === 'Başarısız') return 'tag-bad';
   return 'tag-none';
 }
