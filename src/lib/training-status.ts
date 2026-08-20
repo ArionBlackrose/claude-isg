@@ -103,6 +103,30 @@ export function tagClassFor(code: TrainingStatusCode): string {
   return 'tag-none';
 }
 
+/** Rapor gösterge kartları gibi ikon/vurgu-rengi gerektiren yerlerde
+ * kullanılan ton → CSS sınıfı eşlemesi. `tagClassFor`'un rozet metni yerine
+ * kart/ikon çerçevesi için tam Tailwind sınıfı döndürmesi gerektiğinden ayrı
+ * tutulur, ama aynı üç semantik renge (primary/warning/danger) dayanır —
+ * tek kaynak burası olsun diye `tagClassFor` ile aynı modülde tanımlanır.
+ * Sınıflar derleme zamanında taranabilsin diye tam metin olarak yazılır. */
+export const TONE_CLASSES = {
+  primary: {
+    bar: 'bg-primary',
+    badge: 'bg-primary/15 text-primary',
+    border: 'hover:border-primary',
+  },
+  warning: {
+    bar: 'bg-warning',
+    badge: 'bg-warning/15 text-warning',
+    border: 'hover:border-warning',
+  },
+  danger: {
+    bar: 'bg-danger',
+    badge: 'bg-danger/15 text-danger',
+    border: 'hover:border-danger',
+  },
+} as const;
+
 /** Bir tarih+saat değerini "GG.AA.YYYY SS:DD" olarak tr-TR biçiminde döner. */
 export function fmtDateTime(d: Date | string): string {
   const date = typeof d === 'string' ? new Date(d) : d;

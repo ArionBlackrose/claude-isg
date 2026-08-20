@@ -1,8 +1,22 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import {
+  UsersIcon,
+  UserMinusIcon,
+  BookOpenIcon,
+  ClipboardListIcon,
+  TriangleAlertIcon,
+  ClockIcon,
+  TimerIcon,
+  CalendarRangeIcon,
+  CalendarDaysIcon,
+  type LucideIcon,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -24,6 +38,7 @@ import {
   todayStr,
   daysInMonth,
   tagClassForSonuc,
+  TONE_CLASSES,
   type TrainingStatusCode,
 } from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
@@ -273,7 +288,7 @@ export function RaporView({
         aoa,
         'Adam-Saat',
         `adam-saat-kategori-${rangeStart}_${rangeEnd}-${todayFileStamp()}.xlsx`,
-      );
+      ).catch(() => toast.error('Excel dosyası indirilemedi. Lütfen tekrar deneyin.'));
       return;
     }
     const header = ['Eğitim Adı', 'Oturum Sayısı', 'Toplam Kişi', 'Adam-Saat'];
@@ -285,7 +300,7 @@ export function RaporView({
       aoa,
       'Adam-Saat',
       `adam-saat-${adamSaatKategoriFilter}-${rangeStart}_${rangeEnd}-${todayFileStamp()}.xlsx`,
-    );
+    ).catch(() => toast.error('Excel dosyası indirilemedi. Lütfen tekrar deneyin.'));
   }
 
   const durumRows = useMemo(() => {
@@ -326,67 +341,109 @@ export function RaporView({
     view: DetailView;
     egitimDurum?: string;
     adamSaatRange?: 'ay' | 'tumu' | 'proje';
+    icon: LucideIcon;
+    tone?: 'danger' | 'warning';
   }[] = [
-    { label: 'Güncel Personel', num: allPersonnelCount - cikisCount, view: 'guncelPersonel' },
-    { label: 'Çıkış Personel', num: cikisCount, view: 'cikisPersonel' },
-    { label: 'Eğitim Türü', num: trainings.length, view: 'egitimTuru' },
-    { label: 'Toplam Kayıt', num: records.length, view: 'kayitlar' },
-    { label: 'Süresi Dolan', num: expiredCount, view: 'durum', egitimDurum: 'expired' },
-    { label: 'Yaklaşan (30g)', num: soonCount, view: 'durum', egitimDurum: 'soon' },
+    {
+      label: 'Güncel Personel',
+      num: allPersonnelCount - cikisCount,
+      view: 'guncelPersonel',
+      icon: UsersIcon,
+    },
+    { label: 'Çıkış Personel', num: cikisCount, view: 'cikisPersonel', icon: UserMinusIcon },
+    { label: 'Eğitim Türü', num: trainings.length, view: 'egitimTuru', icon: BookOpenIcon },
+    { label: 'Toplam Kayıt', num: records.length, view: 'kayitlar', icon: ClipboardListIcon },
+    {
+      label: 'Süresi Dolan',
+      num: expiredCount,
+      view: 'durum',
+      egitimDurum: 'expired',
+      icon: TriangleAlertIcon,
+      tone: 'danger',
+    },
+    {
+      label: 'Yaklaşan (30g)',
+      num: soonCount,
+      view: 'durum',
+      egitimDurum: 'soon',
+      icon: ClockIcon,
+      tone: 'warning',
+    },
     {
       label: 'Toplam Adam-Saat',
       num: toplamAdamSaat,
       view: 'adamSaat',
       adamSaatRange: 'tumu',
+      icon: TimerIcon,
     },
     {
       label: 'Proje Başından Beri Adam-Saat',
       num: projeAdamSaat,
       view: 'adamSaat',
       adamSaatRange: 'proje',
+      icon: CalendarRangeIcon,
     },
     {
       label: 'Bu Ay Adam-Saat',
       num: buAyToplamAdamSaat,
       view: 'adamSaat',
       adamSaatRange: 'ay',
+      icon: CalendarDaysIcon,
     },
   ];
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {cards.map((c) => (
-          <button
-            key={c.label}
-            type="button"
-            onClick={() => {
-              setSearch('');
-              setDurumFilter(c.egitimDurum ?? 'all');
-              setEgitimFilter('all');
-              if (c.adamSaatRange === 'ay') {
-                setRangeStart(firstDayOfMonth(currentMonthKey));
-                setRangeEnd(lastDayOfMonth(currentMonthKey));
-              } else if (c.adamSaatRange === 'tumu') {
-                setRangeStart(earliestTarih || firstDayOfMonth(currentMonthKey));
-                setRangeEnd(latestTarih || todayStr());
-              } else if (c.adamSaatRange === 'proje') {
-                setRangeStart(
-                  projeBaslangicTarihi || earliestTarih || firstDayOfMonth(currentMonthKey),
-                );
-                setRangeEnd(latestTarih || todayStr());
-              }
-              if (c.view === 'adamSaat') setAdamSaatKategoriFilter('all');
-              setDetailView(c.view);
-            }}
-            className="rounded-lg border border-border border-l-3 border-l-primary bg-panel p-4 text-left transition-colors hover:bg-panel-2"
-          >
-            <div className="font-heading text-3xl leading-none font-extrabold">{c.num}</div>
-            <div className="mt-1.5 text-xs tracking-wide text-muted-foreground uppercase">
-              {c.label}
-            </div>
-          </button>
-        ))}
+        {cards.map((c) => {
+          const Icon = c.icon;
+          const tone = TONE_CLASSES[c.tone ?? 'primary'];
+          return (
+            <button
+              key={c.label}
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setDurumFilter(c.egitimDurum ?? 'all');
+                setEgitimFilter('all');
+                if (c.adamSaatRange === 'ay') {
+                  setRangeStart(firstDayOfMonth(currentMonthKey));
+                  setRangeEnd(lastDayOfMonth(currentMonthKey));
+                } else if (c.adamSaatRange === 'tumu') {
+                  setRangeStart(earliestTarih || firstDayOfMonth(currentMonthKey));
+                  setRangeEnd(latestTarih || todayStr());
+                } else if (c.adamSaatRange === 'proje') {
+                  setRangeStart(
+                    projeBaslangicTarihi || earliestTarih || firstDayOfMonth(currentMonthKey),
+                  );
+                  setRangeEnd(latestTarih || todayStr());
+                }
+                if (c.view === 'adamSaat') setAdamSaatKategoriFilter('all');
+                setDetailView(c.view);
+              }}
+              className={cn(
+                'group relative overflow-hidden rounded-lg border border-border bg-panel p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md',
+                tone.border,
+              )}
+            >
+              <span className={cn('absolute inset-y-0 left-0 w-[3px]', tone.bar)} />
+              <div className="flex items-start justify-between gap-2">
+                <div className="font-heading text-3xl leading-none font-extrabold">{c.num}</div>
+                <div
+                  className={cn(
+                    'flex size-7 shrink-0 items-center justify-center rounded-md',
+                    tone.badge,
+                  )}
+                >
+                  <Icon className="size-4" />
+                </div>
+              </div>
+              <div className="mt-1.5 text-xs tracking-wide text-muted-foreground uppercase">
+                {c.label}
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {detailView !== 'none' && (
