@@ -26,6 +26,7 @@ import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
 import type { PersonelRow } from './personel-table';
 import { MykBelgesiField } from './myk-belgesi-field';
 import { useConfirm } from '@/hooks/use-confirm';
+import { DisciplineStatus } from '@/components/kayit/uyari-discipline-panel';
 
 export function PersonelDetayDialog({
   personnel,
@@ -53,6 +54,12 @@ export function PersonelDetayDialog({
   });
   const [pendingId, setPendingId] = useState<string | null>(null);
   const { confirm, ConfirmDialog } = useConfirm();
+
+  const uyariRecords = personnel.records
+    .filter((r) => r.kategori === 'Uyarı')
+    .slice()
+    .sort((a, b) => b.tarih.localeCompare(a.tarih));
+  const otherRecords = personnel.records.filter((r) => r.kategori !== 'Uyarı');
 
   function startEdit(r: PersonelRow['records'][number]) {
     setEditingId(r.id);
@@ -105,6 +112,48 @@ export function PersonelDetayDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] space-y-6 overflow-auto pr-1">
+          <section className="rounded-lg border border-border bg-panel-2 p-4">
+            <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Uyarı Eğitimleri ({uyariRecords.length})
+            </h3>
+            {!uyariRecords.length ? (
+              <p className="text-sm text-muted-foreground">
+                Bu personel için uyarı eğitimi kaydı yok.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Eğitim</TableHead>
+                    <TableHead>Tarih</TableHead>
+                    <TableHead>Sonuç</TableHead>
+                    <TableHead>Not</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {uyariRecords.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.egitimAdi}</TableCell>
+                      <TableCell className="font-mono text-muted-foreground">
+                        {fmtDate(r.tarih)}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            <div className="mt-3 border-t border-border pt-3">
+              <h4 className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Uygulanan İşlem
+              </h4>
+              <DisciplineStatus lastAction={personnel.lastDisciplineAction} />
+            </div>
+          </section>
+
           <section>
             <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               MYK Belgesi
@@ -175,9 +224,9 @@ export function PersonelDetayDialog({
 
           <section>
             <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Eğitim Kayıtları ({personnel.records.length})
+              Eğitim Kayıtları ({otherRecords.length})
             </h3>
-            {!personnel.records.length ? (
+            {!otherRecords.length ? (
               <p className="text-sm text-muted-foreground">Bu personel için henüz kayıt yok.</p>
             ) : (
               <Table>
@@ -194,7 +243,7 @@ export function PersonelDetayDialog({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {personnel.records.map((r) => {
+                  {otherRecords.map((r) => {
                     const isEditing = editingId === r.id;
                     const isPending = pendingId === r.id;
                     if (isEditing) {

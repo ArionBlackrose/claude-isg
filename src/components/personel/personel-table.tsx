@@ -26,6 +26,9 @@ import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
 import { PersonelEditDialog } from './personel-edit-dialog';
 import { PersonelDetayDialog } from './personel-detay-dialog';
 import { useConfirm } from '@/hooks/use-confirm';
+import type { DISCIPLINE_ACTIONS } from '@/db/schema';
+
+type DisciplineActionType = (typeof DISCIPLINE_ACTIONS)[number];
 
 export type PersonelRow = {
   id: string;
@@ -60,6 +63,12 @@ export type PersonelRow = {
     driveWebViewLink: string | null;
     createdByName: string;
   }[];
+  lastDisciplineAction: {
+    action: DisciplineActionType;
+    tarih: string;
+    not: string | null;
+    appliedByName: string;
+  } | null;
 };
 
 const DURUM_FILTER_LABELS: Record<string, string> = {
