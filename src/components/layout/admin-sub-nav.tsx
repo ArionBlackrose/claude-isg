@@ -1,8 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { CollapsibleNav } from './collapsible-nav';
 
 const SUB_TABS = [
   { href: '/admin/kullanicilar', label: 'Kullanıcılar' },
@@ -11,26 +9,12 @@ const SUB_TABS = [
   { href: '/admin/pasaport', label: 'Eğitim Pasaportu' },
 ] as const;
 
-export function AdminSubNav() {
-  const pathname = usePathname();
+function isActive(pathname: string, href: string) {
+  return pathname.startsWith(href);
+}
 
+export function AdminSubNav() {
   return (
-    <nav className="mb-4 flex flex-wrap gap-1 border-b border-border">
-      {SUB_TABS.map((tab) => {
-        const active = pathname.startsWith(tab.href);
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={cn(
-              'border-b-[3px] border-transparent px-3.5 py-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground',
-              active && 'border-primary text-primary',
-            )}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <CollapsibleNav tabs={SUB_TABS} ariaLabel="Admin alt menü" isActive={isActive} size="sm" />
   );
 }
