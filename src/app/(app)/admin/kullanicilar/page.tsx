@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { db } from '@/db';
-import { user } from '@/db/schema';
+import { user, userPermission } from '@/db/schema';
 import { requireAdmin } from '@/lib/session';
+import { isValidPermissionKey } from '@/lib/permissions';
 import { UserCreateForm } from '@/components/admin/user-create-form';
 import { UserTable } from '@/components/admin/user-table';
 
@@ -9,9 +10,20 @@ export const metadata: Metadata = { title: 'Kullanıcılar' };
 
 export default async function KullanicilarPage() {
   const session = await requireAdmin();
-  const users = await db.select().from(user);
+  const [users, allPermissions] = await Promise.all([
+    db.select().from(user),
+    db.select().from(userPermission),
+  ]);
 
   users.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+
+  const permissionsByUserId = new Map<string, string[]>();
+  for (const p of allPermissions) {
+    if (!isValidPermissionKey(p.permissionKey)) continue;
+    const list = permissionsByUserId.get(p.userId) ?? [];
+    list.push(p.permissionKey);
+    permissionsByUserId.set(p.userId, list);
+  }
 
   return (
     <div className="space-y-4">
@@ -29,10 +41,18 @@ export default async function KullanicilarPage() {
           Kullanıcılar
         </h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          Kullanıcıların rolünü buradan değiştirebilirsiniz. Kendi rolünüzü değiştiremezsiniz.
+          Kullanıcıların rolünü buradan değiştirebilirsiniz. Dış kullanıcılar için hangi yetkilere
+          sahip olacaklarını &quot;Yetkiler&quot; ile seçebilirsiniz. Kendi rolünüzü
+          değiştiremezsiniz.
         </p>
         <UserTable
-          users={users.map((u) => ({ id: u.id, name: u.name, email: u.email, role: u.role }))}
+          users={users.map((u) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role,
+            permissionKeys: permissionsByUserId.get(u.id) ?? [],
+          }))}
           currentUserId={session.user.id}
         />
       </div>

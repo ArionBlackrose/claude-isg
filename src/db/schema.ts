@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index, check } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, check, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { user } from './auth-schema';
 
 export * from './auth-schema';
@@ -171,3 +171,27 @@ export const trainingRecord = sqliteTable('training_record', {
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+/** Admin'in kullanıcı bazında atadığı granüler yetkiler — bugün yalnızca
+ * "dış kullanıcı" (Eğitim Pasaportu) hesapları için kullanılır, ama role
+ * bağımlı değildir: anahtar kataloğu src/lib/permissions.ts'te tanımlanır,
+ * her satır bir (kullanıcı, yetki anahtarı) çiftini temsil eder. Bir
+ * kullanıcının yetkisi olmayan her anahtar için hiçbir satır yoktur —
+ * "yetki verilmedi" varsayılan durumdur. */
+export const userPermission = sqliteTable(
+  'user_permission',
+  {
+    id: id(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    permissionKey: text('permission_key').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index('user_permission_user_id_idx').on(table.userId),
+    uniqueIndex('user_permission_user_id_key_idx').on(table.userId, table.permissionKey),
+  ],
+);

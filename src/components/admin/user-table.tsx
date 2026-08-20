@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/table';
 import { updateUserRole } from '@/actions/users';
 import { UserEditDialog } from './user-edit-dialog';
+import { UserPermissionsDialog } from './user-permissions-dialog';
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Yönetici',
@@ -33,6 +34,7 @@ export type AdminUserRow = {
   name: string;
   email: string;
   role: 'admin' | 'user' | 'dis';
+  permissionKeys: string[];
 };
 
 export function UserTable({
@@ -45,6 +47,7 @@ export function UserTable({
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
+  const [permissionsUser, setPermissionsUser] = useState<AdminUserRow | null>(null);
 
   async function handleRoleChange(userId: string, role: string | null) {
     if (!role || (role !== 'admin' && role !== 'user' && role !== 'dis')) return;
@@ -95,10 +98,15 @@ export function UserTable({
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell>
+                <TableCell className="space-x-2 whitespace-nowrap">
                   <Button size="sm" variant="outline" onClick={() => setEditingUser(u)}>
                     Düzenle
                   </Button>
+                  {u.role === 'dis' && (
+                    <Button size="sm" variant="outline" onClick={() => setPermissionsUser(u)}>
+                      Yetkiler{u.permissionKeys.length > 0 ? ` (${u.permissionKeys.length})` : ''}
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             );
@@ -111,6 +119,15 @@ export function UserTable({
           open
           onOpenChange={(open) => {
             if (!open) setEditingUser(null);
+          }}
+        />
+      )}
+      {permissionsUser && (
+        <UserPermissionsDialog
+          user={permissionsUser}
+          open
+          onOpenChange={(open) => {
+            if (!open) setPermissionsUser(null);
           }}
         />
       )}

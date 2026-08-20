@@ -2,9 +2,10 @@
 
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { personnel, training, trainingRecord } from '@/db/schema';
+import { personnel, training, trainingRecord, userPermission } from '@/db/schema';
 import { requireSession } from '@/lib/session';
 import { statusFor, type TrainingStatusCode } from '@/lib/training-status';
+import { ALL_PERMISSION_KEYS, isValidPermissionKey, type PermissionKey } from '@/lib/permissions';
 
 export type PassportSearchInput = {
   tcNo?: string;
@@ -28,7 +29,7 @@ export type PassportResult = {
   tcNo: string | null;
   firma: string | null;
   gorev: string | null;
-  durum: 'Güncel' | 'Çıkış';
+  durum: 'Güncel' | 'Çıkış' | null;
   trainings: PassportTrainingStatus[];
 };
 
@@ -46,31 +47,72 @@ async function requireExternalAccess() {
   return session;
 }
 
+/** "dis" hesabının admin tarafından atanmış yetki anahtarlarını döner.
+ * Adminler için bu kavram uygulanmaz — admin her zaman tüm alanları görür
+ * ve dışa aktarabilir, bu yüzden PERMISSION_CATALOG'daki her anahtar
+ * verilmiş sayılır. */
+async function getEffectivePermissionKeys(
+  role: string,
+  userId: string,
+): Promise<Set<PermissionKey>> {
+  if (role === 'admin') {
+    return new Set(ALL_PERMISSION_KEYS);
+  }
+  const rows = await db
+    .select({ permissionKey: userPermission.permissionKey })
+    .from(userPermission)
+    .where(eq(userPermission.userId, userId));
+  return new Set(rows.map((r) => r.permissionKey).filter(isValidPermissionKey));
+}
+
+export type PassportSearchResponse = {
+  results: PassportResult[];
+  /** Admin'in bu hesap için "Sonuçları Excel olarak indirebilir" yetkisini
+   * açıp açmadığı — pasaport-search.tsx "Excel İndir" butonunu buna göre
+   * gösterir/gizler. */
+  canExportExcel: boolean;
+};
+
 /** Girilen T.C. kimlik no / ad / soyad / firma bilgilerine göre personeli
  * bulur ve sadece admin tarafından "Pasaportta göster" olarak işaretlenmiş
  * eğitimler için durumunu döner — Eğitim Pasaportu sorgu panelinin tek veri
  * kaynağı budur. "dis" rolündeki dış kullanıcılar, hesaplarına admin
- * tarafından atanan firmayla sınırlı sonuç alır; admin sınırsız sorgular. */
-export async function searchPassport(input: PassportSearchInput): Promise<PassportResult[]> {
+ * tarafından atanan firmayla sınırlı sonuç alır; admin sınırsız sorgular.
+ * Ayrıca T.C. Kimlik No / Görev alanları ve Excel indirme, admin'in
+ * "Kullanıcılar" sayfasından bu hesaba verdiği yetkilere göre kısıtlanır. */
+export async function searchPassport(input: PassportSearchInput): Promise<PassportSearchResponse> {
   const session = await requireExternalAccess();
+  const permissionKeys = await getEffectivePermissionKeys(session.user.role, session.user.id);
+  const canSeeTcNo = permissionKeys.has('pasaport.tc_no_gor');
+  const canSeeGorev = permissionKeys.has('pasaport.gorev_gor');
+  const canSeeFirma = permissionKeys.has('pasaport.firma_gor');
+  const canSeeDurum = permissionKeys.has('pasaport.durum_gor');
+  const canSeeEgitimTarihi = permissionKeys.has('pasaport.egitim_tarihi_gor');
+  const canSeeSuresiDolmusEgitim = permissionKeys.has('pasaport.suresi_dolmus_egitim_gor');
+  const canSearchAllFirms = permissionKeys.has('pasaport.tum_firmalarda_arama');
+  const canExportExcel = permissionKeys.has('pasaport.excel_indir');
 
   const tcNo = (input.tcNo ?? '').trim();
   const ad = (input.ad ?? '').trim().toLocaleLowerCase('tr-TR');
   const soyad = (input.soyad ?? '').trim().toLocaleLowerCase('tr-TR');
   const firma = (input.firma ?? '').trim().toLocaleLowerCase('tr-TR');
 
-  if (!tcNo && !ad && !soyad && !firma) return [];
+  if (!tcNo && !ad && !soyad && !firma) return { results: [], canExportExcel };
   const tooShort = [tcNo, ad, soyad, firma].some(
     (v) => v.length > 0 && v.length < MIN_QUERY_LENGTH,
   );
-  if (tooShort) return [];
+  if (tooShort) return { results: [], canExportExcel };
 
   // Dış kullanıcı hesabına bir firma atanmışsa (admin panelinden
   // zorunlu), sorgu sadece o firmadaki personelle sınırlanır — böylece
   // bir firmanın hesabı başka bir firmanın personelinin T.C. kimlik no
-  // gibi kişisel verilerini göremez.
+  // gibi kişisel verilerini göremez. Admin bu hesaba "Tüm firmalarda
+  // arama yapabilir" yetkisini verdiyse bu sınırlama uygulanmaz.
   const accountFirma =
-    session.user.role === 'dis' && 'firma' in session.user && typeof session.user.firma === 'string'
+    session.user.role === 'dis' &&
+    !canSearchAllFirms &&
+    'firma' in session.user &&
+    typeof session.user.firma === 'string'
       ? session.user.firma.trim().toLocaleLowerCase('tr-TR')
       : '';
 
@@ -91,23 +133,34 @@ export async function searchPassport(input: PassportSearchInput): Promise<Passpo
     return true;
   });
 
-  return matches.slice(0, MAX_RESULTS).map((p) => ({
+  const results = matches.slice(0, MAX_RESULTS).map((p) => ({
     id: p.id,
     ad: p.ad,
     soyad: p.soyad,
-    tcNo: p.tcNo,
-    firma: p.firma,
-    gorev: p.gorev,
-    durum: p.durum,
-    trainings: visibleTrainings.map((t) => {
-      const status = statusFor(p.id, t.id, records, t);
-      return {
-        trainingId: t.id,
-        ad: t.ad,
-        code: status.code,
-        label: status.label,
-        tarih: status.tarih,
-      };
-    }),
+    tcNo: canSeeTcNo ? p.tcNo : null,
+    firma: canSeeFirma ? p.firma : null,
+    gorev: canSeeGorev ? p.gorev : null,
+    durum: canSeeDurum ? p.durum : null,
+    trainings: visibleTrainings
+      .map((t) => {
+        const status = statusFor(p.id, t.id, records, t);
+        // statusFor, "valid" durumundaki eğitimlerde label'ı doğrudan tarihe
+        // eşitler (bkz. src/lib/training-status.ts) — bu yüzden tarihi
+        // gizlerken label'ı olduğu gibi bırakmak, "Eğitim tarihlerini
+        // görebilir" yetkisini label üzerinden by-pass eder. "soon"/"expired"
+        // etiketleri zaten göreli bilgi taşıdığı (tam tarih içermediği) için
+        // sadece "valid" durumunda label'ı jenerik bir metinle değiştiriyoruz.
+        const label = !canSeeEgitimTarihi && status.code === 'valid' ? 'Geçerli' : status.label;
+        return {
+          trainingId: t.id,
+          ad: t.ad,
+          code: status.code,
+          label,
+          tarih: canSeeEgitimTarihi ? status.tarih : null,
+        };
+      })
+      .filter((t) => canSeeSuresiDolmusEgitim || t.code !== 'expired'),
   }));
+
+  return { results, canExportExcel };
 }
