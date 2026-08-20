@@ -30,7 +30,7 @@ export function ExcelSyncPersonel() {
       ],
       'Personel',
       `personel-sablon-${todayFileStamp()}.xlsx`,
-    );
+    ).catch(() => toast.error('Şablon indirilemedi. Lütfen tekrar deneyin.'));
   }
 
   async function handleSync() {

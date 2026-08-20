@@ -32,7 +32,7 @@ export function ExcelImportKayit() {
       ],
       'Kayıtlar',
       `egitim-kaydi-sablon-${todayFileStamp()}.xlsx`,
-    );
+    ).catch(() => toast.error('Şablon indirilemedi. Lütfen tekrar deneyin.'));
   }
 
   async function handleImport() {

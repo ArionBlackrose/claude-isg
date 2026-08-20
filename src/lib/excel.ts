@@ -1,4 +1,10 @@
-import * as XLSX from 'xlsx';
+// `xlsx` (~500KB) yalnızca gerçekten bir Excel dosyası okunduğunda/yazıldığında
+// yüklenir — bu modül sayfa açılışında import edilen birçok bileşene (dışa
+// aktarma butonları vb.) dahil olduğundan, üst seviyede statik import her
+// sayfanın ilk JS paketini gereksiz yere şişirir.
+async function loadXlsx() {
+  return import('xlsx');
+}
 
 export function normName(s: string | null | undefined): string {
   return String(s ?? '')
@@ -16,24 +22,6 @@ export function splitName(full: string): { ad: string; soyad: string } {
   return { ad: parts.slice(0, -1).join(' '), soyad: parts[parts.length - 1] };
 }
 
-/** Excel'deki hücreleri (tarih, sayı, metin) 'YYYY-AA-GG' veya string'e normalize eder. */
-export function cellToText(value: unknown): string {
-  if (value == null) return '';
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (typeof value === 'number') {
-    // Excel seri tarih numarası olabilir
-    const parsed = XLSX.SSF.parse_date_code(value);
-    if (parsed) {
-      const y = String(parsed.y).padStart(4, '0');
-      const m = String(parsed.m).padStart(2, '0');
-      const d = String(parsed.d).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    }
-    return String(value);
-  }
-  return String(value).trim();
-}
-
 export function isExcelFile(file: File): boolean {
   return /\.(xlsx|xls)$/i.test(file.name);
 }
@@ -42,6 +30,26 @@ export async function parseExcelFile(file: File): Promise<Record<string, string>
   if (!isExcelFile(file)) {
     throw new Error('Sadece .xlsx veya .xls uzantılı dosyalar yüklenebilir.');
   }
+  const XLSX = await loadXlsx();
+
+  /** Excel'deki hücreleri (tarih, sayı, metin) 'YYYY-AA-GG' veya string'e normalize eder. */
+  function cellToText(value: unknown): string {
+    if (value == null) return '';
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    if (typeof value === 'number') {
+      // Excel seri tarih numarası olabilir
+      const parsed = XLSX.SSF.parse_date_code(value);
+      if (parsed) {
+        const y = String(parsed.y).padStart(4, '0');
+        const m = String(parsed.m).padStart(2, '0');
+        const d = String(parsed.d).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      return String(value);
+    }
+    return String(value).trim();
+  }
+
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -55,7 +63,8 @@ export async function parseExcelFile(file: File): Promise<Record<string, string>
   });
 }
 
-export function downloadWorkbook(aoa: unknown[][], sheetName: string, fileName: string) {
+export async function downloadWorkbook(aoa: unknown[][], sheetName: string, fileName: string) {
+  const XLSX = await loadXlsx();
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
