@@ -112,50 +112,6 @@ export function PersonelDetayDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] space-y-6 overflow-auto pr-1">
-          <section className="rounded-lg border border-border bg-panel-2 p-4">
-            <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Uyarı Eğitimleri ({uyariRecords.length})
-            </h3>
-            {!uyariRecords.length ? (
-              <p className="text-sm text-muted-foreground">
-                Bu personel için uyarı eğitimi kaydı yok.
-              </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Eğitim</TableHead>
-                    <TableHead>Tarih</TableHead>
-                    <TableHead>Not</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {uyariRecords.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>{r.egitimAdi}</TableCell>
-                      <TableCell>
-                        {r.sonuc === 'Katıldı' ? (
-                          <span className="font-mono text-muted-foreground">
-                            {fmtDate(r.katilimTarihi)}
-                          </span>
-                        ) : (
-                          <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>Katılmadı</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-            <div className="mt-3 border-t border-border pt-3">
-              <h4 className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Uygulanan İşlem
-              </h4>
-              <DisciplineStatus lastAction={personnel.lastDisciplineAction} />
-            </div>
-          </section>
-
           <section>
             <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
               MYK Belgesi
@@ -361,6 +317,50 @@ export function PersonelDetayDialog({
                 </TableBody>
               </Table>
             )}
+          </section>
+
+          <section className="rounded-lg border border-warning/40 bg-warning/10 p-4">
+            <h3 className="mb-2 text-xs font-semibold tracking-wide text-warning uppercase">
+              Uyarı Eğitimleri ({uyariRecords.length})
+            </h3>
+            {!uyariRecords.length ? (
+              <p className="text-sm text-muted-foreground">
+                Bu personel için uyarı eğitimi kaydı yok.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Eğitim</TableHead>
+                    <TableHead>Tarih</TableHead>
+                    <TableHead>Not</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {uyariRecords.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.egitimAdi}</TableCell>
+                      <TableCell>
+                        {r.sonuc === 'Katıldı' ? (
+                          <span className="font-mono text-muted-foreground">
+                            {fmtDate(r.katilimTarihi)}
+                          </span>
+                        ) : (
+                          <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>Katılmadı</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            <div className="mt-3 border-t border-warning/30 pt-3">
+              <h4 className="mb-1.5 text-xs font-semibold tracking-wide text-warning uppercase">
+                Uygulanan İşlem
+              </h4>
+              <DisciplineStatus lastAction={personnel.lastDisciplineAction} />
+            </div>
           </section>
         </div>
       </DialogContent>
