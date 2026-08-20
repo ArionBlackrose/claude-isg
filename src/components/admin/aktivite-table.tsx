@@ -194,7 +194,28 @@ export function AktiviteTable({ logs }: { logs: AktiviteLog[] }) {
           <div className="p-10 text-center text-muted-foreground">Kayıt bulunamadı.</div>
         ) : (
           <>
-            <Table containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border">
+            {/* Mobil: kart görünümü */}
+            <div className="space-y-2 md:hidden">
+              {paged.map((l) => (
+                <div key={l.id} className="rounded-lg border border-border bg-panel p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`tag ${ACTION_TAG[l.action]}`}>{ACTION_LABELS[l.action]}</span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {fmtDateTime(l.createdAt)}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm">
+                    <span className="text-muted-foreground">{ENTITY_LABELS[l.entityType]}:</span>{' '}
+                    {l.entityLabel}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">{l.summary}</div>
+                  <div className="mt-1.5 text-xs font-medium text-foreground">{l.userName}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Masaüstü: tam tablo */}
+            <Table containerClassName="hidden max-h-[520px] overflow-auto rounded-lg border border-border md:block">
               <TableHeader>
                 <TableRow>
                   <TableHead>Tarih</TableHead>

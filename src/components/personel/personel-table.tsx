@@ -149,7 +149,9 @@ export function PersonelTable({
         p.durum,
       ]);
     });
-    downloadWorkbook(aoa, 'Personel', `personel-listesi-${todayFileStamp()}.xlsx`);
+    downloadWorkbook(aoa, 'Personel', `personel-listesi-${todayFileStamp()}.xlsx`).catch(() =>
+      toast.error('Excel dosyası indirilemedi. Lütfen tekrar deneyin.'),
+    );
   }
 
   return (
@@ -178,70 +180,138 @@ export function PersonelTable({
       {!filtered.length ? (
         <div className="p-10 text-center text-muted-foreground">Personel bulunamadı.</div>
       ) : (
-        <Table containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Ad Soyad</TableHead>
-              <TableHead>TC No</TableHead>
-              <TableHead>Görev</TableHead>
-              <TableHead>Firma</TableHead>
-              <TableHead>Çalışma Şekli</TableHead>
-              <TableHead>Doğum Tarihi</TableHead>
-              <TableHead>İşe Giriş</TableHead>
-              <TableHead>Durum</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          {/* Mobil: kart görünümü */}
+          <div className="space-y-2.5 md:hidden">
             {filtered.map((p) => (
-              <Fragment key={p.id}>
-                <TableRow>
-                  <TableCell>
-                    <button
-                      type="button"
-                      className="text-left text-primary hover:underline"
-                      onClick={() => setDetayPersonelId(p.id)}
-                      title="Tüm verileri görüntüle"
+              <div key={p.id} className="rounded-lg border border-border bg-panel p-3.5">
+                <div className="flex items-start justify-between gap-2">
+                  <button
+                    type="button"
+                    className="text-left font-semibold text-primary hover:underline"
+                    onClick={() => setDetayPersonelId(p.id)}
+                    title="Tüm verileri görüntüle"
+                  >
+                    {p.ad} {p.soyad}
+                  </button>
+                  <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
+                    {p.durum}
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase">TC No</div>
+                    <div className="font-mono">{p.tcNo || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase">Görev</div>
+                    <div>{p.gorev || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase">Firma</div>
+                    <div>{p.firma || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase">Çalışma Şekli</div>
+                    <div>{p.calismaSekli || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase">Doğum Tarihi</div>
+                    <div className="font-mono">{fmtDate(p.dogumTarihi)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase">İşe Giriş</div>
+                    <div className="font-mono">{fmtDate(p.iseGirisTarihi)}</div>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
+                    Düzenle
+                  </Button>
+                  {canDelete && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-danger text-danger hover:bg-danger/10"
+                      disabled={pendingDeleteId === p.id}
+                      onClick={() => handleDelete(p)}
                     >
-                      {p.ad} {p.soyad}
-                    </button>
-                  </TableCell>
-                  <TableCell className="font-mono text-muted-foreground">{p.tcNo || '-'}</TableCell>
-                  <TableCell>{p.gorev || '-'}</TableCell>
-                  <TableCell>{p.firma || '-'}</TableCell>
-                  <TableCell className="text-muted-foreground">{p.calismaSekli || '-'}</TableCell>
-                  <TableCell className="font-mono text-muted-foreground">
-                    {fmtDate(p.dogumTarihi)}
-                  </TableCell>
-                  <TableCell className="font-mono text-muted-foreground">
-                    {fmtDate(p.iseGirisTarihi)}
-                  </TableCell>
-                  <TableCell>
-                    <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                      {p.durum}
-                    </span>
-                  </TableCell>
-                  <TableCell className="space-x-2 whitespace-nowrap">
-                    <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
-                      Düzenle
+                      Sil
                     </Button>
-                    {canDelete && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-danger text-danger hover:bg-danger/10"
-                        disabled={pendingDeleteId === p.id}
-                        onClick={() => handleDelete(p)}
-                      >
-                        Sil
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              </Fragment>
+                  )}
+                </div>
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+
+          {/* Masaüstü: tam tablo */}
+          <Table containerClassName="hidden max-h-[520px] overflow-auto rounded-lg border border-border md:block">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ad Soyad</TableHead>
+                <TableHead>TC No</TableHead>
+                <TableHead>Görev</TableHead>
+                <TableHead>Firma</TableHead>
+                <TableHead>Çalışma Şekli</TableHead>
+                <TableHead>Doğum Tarihi</TableHead>
+                <TableHead>İşe Giriş</TableHead>
+                <TableHead>Durum</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((p) => (
+                <Fragment key={p.id}>
+                  <TableRow>
+                    <TableCell>
+                      <button
+                        type="button"
+                        className="text-left text-primary hover:underline"
+                        onClick={() => setDetayPersonelId(p.id)}
+                        title="Tüm verileri görüntüle"
+                      >
+                        {p.ad} {p.soyad}
+                      </button>
+                    </TableCell>
+                    <TableCell className="font-mono text-muted-foreground">
+                      {p.tcNo || '-'}
+                    </TableCell>
+                    <TableCell>{p.gorev || '-'}</TableCell>
+                    <TableCell>{p.firma || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.calismaSekli || '-'}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">
+                      {fmtDate(p.dogumTarihi)}
+                    </TableCell>
+                    <TableCell className="font-mono text-muted-foreground">
+                      {fmtDate(p.iseGirisTarihi)}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
+                        {p.durum}
+                      </span>
+                    </TableCell>
+                    <TableCell className="space-x-2 whitespace-nowrap">
+                      <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>
+                        Düzenle
+                      </Button>
+                      {canDelete && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-danger text-danger hover:bg-danger/10"
+                          disabled={pendingDeleteId === p.id}
+                          onClick={() => handleDelete(p)}
+                        >
+                          Sil
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                </Fragment>
+              ))}
+            </TableBody>
+          </Table>
+        </>
       )}
       {editingPersonel && (
         <PersonelEditDialog

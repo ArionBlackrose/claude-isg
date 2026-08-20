@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -242,6 +243,20 @@ export function LogTable({
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
+  // Mobil kart listesi ve masaüstü tablosu aynı anda mount edilip CSS ile
+  // gösterilip/gizlendiğinden (bkz. altta `md:hidden` / `hidden md:block`),
+  // her personel×eğitim durumu burada BİR KEZ hesaplanıp iki görünüm
+  // arasında paylaşılır — aksi halde getStatus() her render'da iki katına
+  // çıkardı.
+  const pagedWithStatuses = useMemo(
+    () =>
+      paged.map((p) => ({
+        p,
+        statuses: visibleTrainings.map((t) => ({ t, s: getStatus(p.id, t.id, t) })),
+      })),
+    [paged, visibleTrainings, getStatus],
+  );
+
   const editingPersonel = editing ? personnel.find((p) => p.id === editing.personnelId) : null;
   const editingTraining = editing ? trainings.find((t) => t.id === editing.trainingId) : null;
 
@@ -273,7 +288,9 @@ export function LogTable({
       });
       aoa.push([...base, ...cols]);
     });
-    downloadWorkbook(aoa, 'Kayıtlar', `egitim-kayitlari-${todayFileStamp()}.xlsx`);
+    downloadWorkbook(aoa, 'Kayıtlar', `egitim-kayitlari-${todayFileStamp()}.xlsx`).catch(() =>
+      toast.error('Excel dosyası indirilemedi. Lütfen tekrar deneyin.'),
+    );
   }
 
   if (!trainings.length) {
@@ -411,9 +428,44 @@ export function LogTable({
         <div className="p-10 text-center text-muted-foreground">Kayıt bulunamadı.</div>
       ) : (
         <>
+          {/* Mobil: kart görünümü — her personel bir kart, eğitimler durum çipleri olarak listelenir */}
+          <div className="space-y-2.5 md:hidden">
+            {pagedWithStatuses.map(({ p, statuses }, i) => (
+              <div key={p.id} className="rounded-lg border border-border bg-panel p-3.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-semibold">
+                      {(page - 1) * pageSize + i + 1}. {p.ad} {p.soyad}
+                    </div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {p.gorev || '-'} · {p.firma || '-'}
+                    </div>
+                  </div>
+                  <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
+                    {p.durum}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {statuses.map(({ t, s }) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`tag ${tagClassFor(s.code)} cursor-pointer`}
+                      title={t.ad}
+                      onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
+                    >
+                      {t.ad}: {s.code === 'valid' ? fmtDate(s.label) : s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Masaüstü: tam tablo */}
           <Table
             className="table-fixed"
-            containerClassName="max-h-[560px] overflow-auto rounded-lg border border-border"
+            containerClassName="hidden max-h-[560px] overflow-auto rounded-lg border border-border md:block"
           >
             <TableHeader>
               <TableRow>
@@ -432,7 +484,7 @@ export function LogTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.map((p, i) => (
+              {pagedWithStatuses.map(({ p, statuses }, i) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-mono text-muted-foreground">
                     {(page - 1) * pageSize + i + 1}
@@ -451,25 +503,22 @@ export function LogTable({
                       {p.durum}
                     </span>
                   </TableCell>
-                  {visibleTrainings.map((t) => {
-                    const s = getStatus(p.id, t.id, t);
-                    return (
-                      <TableCell key={t.id} className="w-40 text-center">
-                        <button
-                          type="button"
-                          className={`tag ${tagClassFor(s.code)} cursor-pointer`}
-                          title={
-                            s.tarih
-                              ? `${fmtDate(s.tarih)} — düzenlemek için tıklayın`
-                              : 'düzenlemek için tıklayın'
-                          }
-                          onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
-                        >
-                          {s.code === 'valid' ? fmtDate(s.label) : s.label}
-                        </button>
-                      </TableCell>
-                    );
-                  })}
+                  {statuses.map(({ t, s }) => (
+                    <TableCell key={t.id} className="w-40 text-center">
+                      <button
+                        type="button"
+                        className={`tag ${tagClassFor(s.code)} cursor-pointer`}
+                        title={
+                          s.tarih
+                            ? `${fmtDate(s.tarih)} — düzenlemek için tıklayın`
+                            : 'düzenlemek için tıklayın'
+                        }
+                        onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
+                      >
+                        {s.code === 'valid' ? fmtDate(s.label) : s.label}
+                      </button>
+                    </TableCell>
+                  ))}
                 </TableRow>
               ))}
             </TableBody>

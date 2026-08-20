@@ -38,6 +38,69 @@ export type KatalogRow = {
   soonCount: number;
 };
 
+type KatalogDraft = {
+  ad: string;
+  kategori: TrainingInput['kategori'];
+  gecerlilikAy: string;
+  egitimSuresi: string;
+};
+
+/** Katalog satırı düzenleme alanlarının tek kaynağı — hem mobil kart hem
+ * masaüstü tablo satırı bu kontrolleri kullanır, sadece etraflarındaki
+ * yerleşim (label/grid vs. TableCell) farklıdır. */
+function buildKatalogDraftFields(
+  draft: KatalogDraft,
+  setDraft: React.Dispatch<React.SetStateAction<KatalogDraft>>,
+  numberInputClassName?: string,
+) {
+  return {
+    adField: (
+      <Input
+        value={draft.ad}
+        onChange={(e) => setDraft((d) => ({ ...d, ad: e.target.value }))}
+        placeholder="Eğitim adı"
+      />
+    ),
+    kategoriField: (
+      <Select
+        value={draft.kategori}
+        onValueChange={(v) =>
+          setDraft((d) => ({ ...d, kategori: (v as TrainingInput['kategori']) ?? d.kategori }))
+        }
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {TRAINING_CATEGORIES.map((kategori) => (
+            <SelectItem key={kategori} value={kategori}>
+              {kategori}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ),
+    gecerlilikField: (
+      <Input
+        type="number"
+        min={0}
+        className={numberInputClassName}
+        value={draft.gecerlilikAy}
+        onChange={(e) => setDraft((d) => ({ ...d, gecerlilikAy: e.target.value }))}
+      />
+    ),
+    suresiField: (
+      <Input
+        type="number"
+        min={0}
+        className={numberInputClassName}
+        value={draft.egitimSuresi}
+        onChange={(e) => setDraft((d) => ({ ...d, egitimSuresi: e.target.value }))}
+      />
+    ),
+  };
+}
+
 export function KatalogTable({
   rows,
   isAdmin,
@@ -83,6 +146,9 @@ export function KatalogTable({
     const start = (page - 1) * pageSize;
     return filteredRows.slice(start, start + pageSize);
   }, [filteredRows, page, pageSize]);
+
+  const mobileDraftFields = buildKatalogDraftFields(draft, setDraft);
+  const desktopDraftFields = buildKatalogDraftFields(draft, setDraft, 'w-24');
 
   function startEdit(row: KatalogRow) {
     setEditingId(row.id);
@@ -150,118 +216,84 @@ export function KatalogTable({
           Sonuç bulunamadı.
         </div>
       ) : (
-        <Table containerClassName="max-h-[520px] overflow-auto rounded-lg border border-border">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Eğitim Adı</TableHead>
-              <TableHead>Kategori</TableHead>
-              <TableHead>Geçerlilik (Ay)</TableHead>
-              <TableHead>Süre (Saat)</TableHead>
-              <TableHead>Kayıt Sayısı</TableHead>
-              <TableHead>Durum</TableHead>
-              {isAdmin && <TableHead />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          {/* Mobil: kart görünümü — geniş tablo yerine her satır tek bir kart */}
+          <div className="space-y-2.5 md:hidden">
             {pagedRows.map((row) => {
               const isEditing = editingId === row.id;
               const isPending = pendingId === row.id;
               if (isEditing) {
                 return (
-                  <TableRow key={row.id}>
-                    <TableCell>
-                      <Input
-                        value={draft.ad}
-                        onChange={(e) => setDraft((d) => ({ ...d, ad: e.target.value }))}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={draft.kategori}
-                        onValueChange={(v) =>
-                          setDraft((d) => ({
-                            ...d,
-                            kategori: (v as TrainingInput['kategori']) ?? d.kategori,
-                          }))
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TRAINING_CATEGORIES.map((kategori) => (
-                            <SelectItem key={kategori} value={kategori}>
-                              {kategori}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        className="w-24"
-                        value={draft.gecerlilikAy}
-                        onChange={(e) => setDraft((d) => ({ ...d, gecerlilikAy: e.target.value }))}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        className="w-24"
-                        value={draft.egitimSuresi}
-                        onChange={(e) => setDraft((d) => ({ ...d, egitimSuresi: e.target.value }))}
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono text-muted-foreground">
-                      {row.recordCount}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">-</TableCell>
-                    <TableCell className="space-x-2 whitespace-nowrap">
+                  <div
+                    key={row.id}
+                    className="space-y-2.5 rounded-lg border border-primary bg-panel p-3.5"
+                  >
+                    {mobileDraftFields.adField}
+                    {mobileDraftFields.kategoriField}
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <div className="mb-1 text-xs text-muted-foreground">Geçerlilik (ay)</div>
+                        {mobileDraftFields.gecerlilikField}
+                      </div>
+                      <div>
+                        <div className="mb-1 text-xs text-muted-foreground">Süre (saat)</div>
+                        {mobileDraftFields.suresiField}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
                       <Button size="sm" disabled={isPending} onClick={() => saveEdit(row.id)}>
                         Kaydet
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
                         İptal
                       </Button>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 );
               }
               return (
-                <TableRow key={row.id}>
-                  <TableCell>{row.ad}</TableCell>
-                  <TableCell className="text-muted-foreground">{row.kategori || '-'}</TableCell>
-                  <TableCell>{row.gecerlilikAy ? `${row.gecerlilikAy} ay` : 'Süresiz'}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {row.egitimSuresi ? `${row.egitimSuresi} saat` : '-'}
-                  </TableCell>
-                  <TableCell className="font-mono">{row.recordCount}</TableCell>
-                  <TableCell className="space-x-2.5 text-xs whitespace-nowrap">
-                    {row.expiredCount > 0 && (
-                      <Link
-                        href={`/rapor?egitim=${row.id}&durum=expired`}
-                        className="text-danger hover:underline"
-                      >
-                        {row.expiredCount} süresi doldu
-                      </Link>
-                    )}
-                    {row.soonCount > 0 && (
-                      <Link
-                        href={`/rapor?egitim=${row.id}&durum=soon`}
-                        className="text-primary hover:underline"
-                      >
-                        {row.soonCount} yaklaşıyor
-                      </Link>
-                    )}
-                    {!row.expiredCount && !row.soonCount && (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
+                <div key={row.id} className="rounded-lg border border-border bg-panel p-3.5">
+                  <div className="font-semibold">{row.ad}</div>
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase">Kategori</div>
+                      <div>{row.kategori || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase">Geçerlilik</div>
+                      <div>{row.gecerlilikAy ? `${row.gecerlilikAy} ay` : 'Süresiz'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase">Süre</div>
+                      <div>{row.egitimSuresi ? `${row.egitimSuresi} saat` : '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground uppercase">Kayıt</div>
+                      <div className="font-mono">{row.recordCount}</div>
+                    </div>
+                  </div>
+                  {(row.expiredCount > 0 || row.soonCount > 0) && (
+                    <div className="mt-2 space-x-3 text-xs">
+                      {row.expiredCount > 0 && (
+                        <Link
+                          href={`/rapor?egitim=${row.id}&durum=expired`}
+                          className="text-danger hover:underline"
+                        >
+                          {row.expiredCount} süresi doldu
+                        </Link>
+                      )}
+                      {row.soonCount > 0 && (
+                        <Link
+                          href={`/rapor?egitim=${row.id}&durum=soon`}
+                          className="text-primary hover:underline"
+                        >
+                          {row.soonCount} yaklaşıyor
+                        </Link>
+                      )}
+                    </div>
+                  )}
                   {isAdmin && (
-                    <TableCell className="space-x-2 whitespace-nowrap">
+                    <div className="mt-3 flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => startEdit(row)}>
                         Düzenle
                       </Button>
@@ -276,13 +308,106 @@ export function KatalogTable({
                           Sil
                         </Button>
                       )}
-                    </TableCell>
+                    </div>
                   )}
-                </TableRow>
+                </div>
               );
             })}
-          </TableBody>
-        </Table>
+          </div>
+
+          {/* Masaüstü: tam tablo */}
+          <Table containerClassName="hidden max-h-[520px] overflow-auto rounded-lg border border-border md:block">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Eğitim Adı</TableHead>
+                <TableHead>Kategori</TableHead>
+                <TableHead>Geçerlilik (Ay)</TableHead>
+                <TableHead>Süre (Saat)</TableHead>
+                <TableHead>Kayıt Sayısı</TableHead>
+                <TableHead>Durum</TableHead>
+                {isAdmin && <TableHead />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pagedRows.map((row) => {
+                const isEditing = editingId === row.id;
+                const isPending = pendingId === row.id;
+                if (isEditing) {
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell>{desktopDraftFields.adField}</TableCell>
+                      <TableCell>{desktopDraftFields.kategoriField}</TableCell>
+                      <TableCell>{desktopDraftFields.gecerlilikField}</TableCell>
+                      <TableCell>{desktopDraftFields.suresiField}</TableCell>
+                      <TableCell className="font-mono text-muted-foreground">
+                        {row.recordCount}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">-</TableCell>
+                      <TableCell className="space-x-2 whitespace-nowrap">
+                        <Button size="sm" disabled={isPending} onClick={() => saveEdit(row.id)}>
+                          Kaydet
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
+                          İptal
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+                return (
+                  <TableRow key={row.id}>
+                    <TableCell>{row.ad}</TableCell>
+                    <TableCell className="text-muted-foreground">{row.kategori || '-'}</TableCell>
+                    <TableCell>{row.gecerlilikAy ? `${row.gecerlilikAy} ay` : 'Süresiz'}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {row.egitimSuresi ? `${row.egitimSuresi} saat` : '-'}
+                    </TableCell>
+                    <TableCell className="font-mono">{row.recordCount}</TableCell>
+                    <TableCell className="space-x-2.5 text-xs whitespace-nowrap">
+                      {row.expiredCount > 0 && (
+                        <Link
+                          href={`/rapor?egitim=${row.id}&durum=expired`}
+                          className="text-danger hover:underline"
+                        >
+                          {row.expiredCount} süresi doldu
+                        </Link>
+                      )}
+                      {row.soonCount > 0 && (
+                        <Link
+                          href={`/rapor?egitim=${row.id}&durum=soon`}
+                          className="text-primary hover:underline"
+                        >
+                          {row.soonCount} yaklaşıyor
+                        </Link>
+                      )}
+                      {!row.expiredCount && !row.soonCount && (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="space-x-2 whitespace-nowrap">
+                        <Button size="sm" variant="outline" onClick={() => startEdit(row)}>
+                          Düzenle
+                        </Button>
+                        {canDelete && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-danger text-danger hover:bg-danger/10"
+                            disabled={isPending}
+                            onClick={() => handleDelete(row)}
+                          >
+                            Sil
+                          </Button>
+                        )}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </>
       )}
       {filteredRows.length > 0 && (
         <PaginationBar
