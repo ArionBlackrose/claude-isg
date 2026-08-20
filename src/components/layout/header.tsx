@@ -7,7 +7,7 @@ export function Header({ userName, userEmail }: { userName: string; userEmail: s
       <div className="flex items-center gap-3.5">
         <div>
           <h1 className="font-heading text-2xl leading-none font-extrabold tracking-wide uppercase sm:text-[30px]">
-            İSG-Ç Eğitim Takip Sistemi
+            İSG-Ç Takip Sistemi
           </h1>
         </div>
       </div>

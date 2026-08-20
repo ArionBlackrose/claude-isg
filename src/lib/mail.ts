@@ -34,7 +34,7 @@ export async function sendOtpEmail(email: string, otp: string): Promise<void> {
     `Giriş Kodunuz: ${otp}`,
     `
       <div style="font-family:sans-serif;max-width:420px;margin:0 auto;">
-        <h2 style="letter-spacing:0.3px;">İSG-Ç Eğitim Takip Sistemi</h2>
+        <h2 style="letter-spacing:0.3px;">İSG-Ç Takip Sistemi</h2>
         <p>Giriş kodunuz:</p>
         <p style="font-size:32px;font-weight:800;letter-spacing:6px;">${otp}</p>
         <p style="color:#666;font-size:13px;">Bu kod 5 dakika içinde geçerliliğini yitirir. Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>

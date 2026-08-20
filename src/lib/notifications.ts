@@ -94,7 +94,7 @@ export async function runWeeklyExpiryDigestIfNeeded(): Promise<void> {
 
   const html = `
     <div style="font-family:sans-serif;max-width:640px;margin:0 auto;">
-      <h2 style="letter-spacing:0.3px;">İSG-Ç Eğitim Takip Sistemi — Haftalık Eğitim Durumu Özeti</h2>
+      <h2 style="letter-spacing:0.3px;">İSG-Ç Takip Sistemi — Haftalık Eğitim Durumu Özeti</h2>
       <p style="color:#666;font-size:13px;">Bu özet, süresi dolmuş veya 30 gün içinde dolacak eğitimleri listeler.</p>
       ${renderSection('Süresi Dolan Eğitimler', expired)}
       ${renderSection('Süresi Yaklaşan Eğitimler (30 gün)', soon)}

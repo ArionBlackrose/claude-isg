@@ -81,7 +81,7 @@ export default function LoginPage() {
     <div className="w-full max-w-sm rounded-lg border border-border bg-panel p-8">
       <div className="mb-6">
         <h1 className="font-heading text-2xl font-extrabold tracking-wide uppercase">
-          İSG-Ç Eğitim Takip Sistemi
+          İSG-Ç Takip Sistemi
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {step === 'email'
