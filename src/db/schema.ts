@@ -112,6 +112,39 @@ export const projectSettings = sqliteTable(
   (table) => [check('project_settings_singleton', sql`${table.id} = 'default'`)],
 );
 
+export const DISCIPLINE_ACTIONS = [
+  'Uyarı',
+  'Kınama',
+  'Ağır Kınama',
+  'İşten Çıkarma',
+  'Kısıtlı Liste',
+] as const;
+
+/** Son 3 ayda 3+ Uyarı eğitimi alan bir personele uygulanan disiplin
+ * işlemi — her kayıt bir uygulamayı temsil eder (aynı personel için
+ * birden fazla olabilir); dashboard en son kaydı gösterir. */
+export const disciplineAction = sqliteTable(
+  'discipline_action',
+  {
+    id: id(),
+    personnelId: text('personnel_id')
+      .notNull()
+      .references(() => personnel.id, { onDelete: 'cascade' }),
+    action: text('action', { enum: DISCIPLINE_ACTIONS }).notNull(),
+    // İşlemin uygulandığı/geçerli olduğu tarih — kayıt oluşturulma anından
+    // (createdAt) farklı olabileceği için ayrıca zorunlu tutulur.
+    tarih: text('tarih').notNull().default('1970-01-01'),
+    not: text('not'),
+    createdByUserId: text('created_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [index('discipline_action_personnel_id_idx').on(table.personnelId)],
+);
+
 export const trainingRecord = sqliteTable('training_record', {
   id: id(),
   personnelId: text('personnel_id')

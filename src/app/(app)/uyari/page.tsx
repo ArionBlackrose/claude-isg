@@ -1,20 +1,16 @@
 import type { Metadata } from 'next';
 import { desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
-import { personnel, training, trainingRecord, user } from '@/db/schema';
+import { disciplineAction, personnel, training, trainingRecord, user } from '@/db/schema';
 import { getSession } from '@/lib/session';
 import { KayitForm } from '@/components/kayit/kayit-form';
 import { UyariRecordsTable, type UyariRecordRow } from '@/components/kayit/uyari-records-table';
+import {
+  UyariDisciplinePanel,
+  type FlaggedPersonnelRow,
+} from '@/components/kayit/uyari-discipline-panel';
 import { createUyariRecords } from '@/actions/records';
 import { addMonths, fmtDate, todayStr } from '@/lib/training-status';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 
 const UYARI_ESIK = 3;
 const UYARI_PENCERE_AY = -3;
@@ -33,7 +29,7 @@ export default async function UyariEgitimleriPage() {
     .orderBy(training.ad);
   const uyariTrainingIds = uyariTrainings.map((t) => t.id);
 
-  const [session, allPersonnel, allUsers, uyariRecords] = await Promise.all([
+  const [session, allPersonnel, allUsers, uyariRecords, disciplineActions] = await Promise.all([
     getSession(),
     db.select().from(personnel),
     db.select().from(user),
@@ -44,6 +40,7 @@ export default async function UyariEgitimleriPage() {
           .where(inArray(trainingRecord.trainingId, uyariTrainingIds))
           .orderBy(desc(trainingRecord.tarih), desc(trainingRecord.createdAt))
       : Promise.resolve([]),
+    db.select().from(disciplineAction).orderBy(desc(disciplineAction.createdAt)),
   ]);
 
   const uyariTrainingMap = new Map(uyariTrainings.map((t) => [t.id, t]));
@@ -75,6 +72,39 @@ export default async function UyariEgitimleriPage() {
     }))
     .sort((a, b) => b.count - a.count);
 
+  // disciplineActions createdAt'a göre azalan sırada geldiğinden, bir
+  // personel için karşılaşılan ilk kayıt otomatik olarak en sonuncusudur.
+  const lastActionByPersonnel = new Map<string, (typeof disciplineActions)[number]>();
+  for (const a of disciplineActions) {
+    if (!lastActionByPersonnel.has(a.personnelId)) {
+      lastActionByPersonnel.set(a.personnelId, a);
+    }
+  }
+
+  const flaggedRows: FlaggedPersonnelRow[] = flagged.map((f) => {
+    const p = personnelMap.get(f.personnelId);
+    const last = lastActionByPersonnel.get(f.personnelId);
+    return {
+      personnelId: f.personnelId,
+      ad: p ? `${p.ad} ${p.soyad}` : 'silinmiş personel',
+      firma: p?.firma ?? null,
+      count: f.count,
+      recordsSummary: f.records
+        .map((r) => `${uyariTrainingMap.get(r.trainingId)?.ad ?? '-'} (${fmtDate(r.tarih)})`)
+        .join(', '),
+      lastAction: last
+        ? {
+            action: last.action,
+            tarih: last.tarih,
+            not: last.not,
+            appliedByName: last.createdByUserId
+              ? (userMap.get(last.createdByUserId)?.name ?? 'silinmiş kullanıcı')
+              : '-',
+          }
+        : null,
+    };
+  });
+
   const records: UyariRecordRow[] = uyariRecords.map((r) => {
     const p = personnelMap.get(r.personnelId);
     return {
@@ -99,48 +129,10 @@ export default async function UyariEgitimleriPage() {
         </h2>
         <p className="mb-4 text-xs text-muted-foreground">
           Son {Math.abs(UYARI_PENCERE_AY)} ay içinde {UYARI_ESIK} veya daha fazla Uyarı eğitimi
-          kaydı alan personel burada listelenir.
+          kaydı alan personel burada listelenir. Her personel için hangi disiplin işleminin
+          uygulandığı sorulur ve kaydedilen işlem burada gösterilir.
         </p>
-        {!flagged.length ? (
-          <div className="p-8 text-center text-muted-foreground">
-            Son {Math.abs(UYARI_PENCERE_AY)} ayda eşiği aşan personel yok.
-          </div>
-        ) : (
-          <Table containerClassName="max-h-[420px] overflow-auto rounded-lg border border-border">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Personel</TableHead>
-                <TableHead>Firma</TableHead>
-                <TableHead>Uyarı Sayısı</TableHead>
-                <TableHead>Son Uyarı Eğitimleri</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {flagged.map((f) => {
-                const p = personnelMap.get(f.personnelId);
-                return (
-                  <TableRow key={f.personnelId}>
-                    <TableCell className="font-semibold">
-                      {p ? `${p.ad} ${p.soyad}` : 'silinmiş personel'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{p?.firma || '-'}</TableCell>
-                    <TableCell>
-                      <span className="tag tag-bad">{f.count}</span>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {f.records
-                        .map(
-                          (r) =>
-                            `${uyariTrainingMap.get(r.trainingId)?.ad ?? '-'} (${fmtDate(r.tarih)})`,
-                        )
-                        .join(', ')}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
+        <UyariDisciplinePanel rows={flaggedRows} />
       </div>
 
       <div className="rounded-lg border border-border bg-panel p-5">

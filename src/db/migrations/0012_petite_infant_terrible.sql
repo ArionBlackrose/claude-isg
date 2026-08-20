@@ -1,0 +1,1 @@
+ALTER TABLE `discipline_action` ADD `tarih` text DEFAULT '1970-01-01' NOT NULL;

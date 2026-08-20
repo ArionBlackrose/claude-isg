@@ -78,6 +78,20 @@
       "when": 1787144214811,
       "tag": "0010_dashing_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1787214998006,
+      "tag": "0011_chief_war_machine",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1787216833637,
+      "tag": "0012_petite_infant_terrible",
+      "breakpoints": true
     }
   ]
 }
