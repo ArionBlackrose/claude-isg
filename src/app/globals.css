@@ -54,78 +54,84 @@
 }
 
 :root {
-  /* REC·TSK prototipinden taşınan endüstriyel koyu tema paleti */
-  --background: #0d1a26;
-  --foreground: #e9eef3;
-  --panel: #142230;
-  --panel-2: #1b2c3d;
-  --card: #142230;
-  --card-foreground: #e9eef3;
-  --popover: #142230;
-  --popover-foreground: #e9eef3;
-  --primary: #f2b705;
-  --primary-foreground: #1a1200;
-  --secondary: #1b2c3d;
-  --secondary-foreground: #e9eef3;
-  --muted: #1b2c3d;
-  --muted-foreground: #8fa3b5;
-  --accent: #f2b705;
-  --accent-foreground: #1a1200;
-  --success: #3fb27f;
-  --warning: #f2b705;
-  --danger: #e5484d;
-  --destructive: #e5484d;
-  --border: #26394c;
-  --input: #1b2c3d;
-  --ring: #f2b705;
-  --chart-1: #f2b705;
-  --chart-2: #3fb27f;
-  --chart-3: #e5484d;
-  --chart-4: #f2600c;
-  --chart-5: #8fa3b5;
+  /* Aydınlık Mod — orijinal lacivert/altın kimliğin gün ışığında okunabilir hali */
+  --background: #f4f6f8;
+  --foreground: #101c27;
+  --panel: #ffffff;
+  --panel-2: #eef1f4;
+  --card: #ffffff;
+  --card-foreground: #101c27;
+  --popover: #ffffff;
+  --popover-foreground: #101c27;
+  --primary: #a3760a;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1f4;
+  --secondary-foreground: #101c27;
+  --muted: #eef1f4;
+  --muted-foreground: #5a7186;
+  --accent: #a3760a;
+  --accent-foreground: #ffffff;
+  --success: #1c7a53;
+  --warning: #a3760a;
+  --danger: #b93338;
+  --destructive: #b93338;
+  --border: #d7dfe6;
+  --input: #eef1f4;
+  --ring: #a3760a;
+  --chart-1: #a3760a;
+  --chart-2: #1c7a53;
+  --chart-3: #b93338;
+  --chart-4: #c07a00;
+  --chart-5: #5a7186;
   --radius: 0.5rem;
-  --sidebar: #142230;
-  --sidebar-foreground: #e9eef3;
-  --sidebar-primary: #f2b705;
-  --sidebar-primary-foreground: #1a1200;
-  --sidebar-accent: #1b2c3d;
-  --sidebar-accent-foreground: #e9eef3;
-  --sidebar-border: #26394c;
-  --sidebar-ring: #f2b705;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #101c27;
+  --sidebar-primary: #a3760a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef1f4;
+  --sidebar-accent-foreground: #101c27;
+  --sidebar-border: #d7dfe6;
+  --sidebar-ring: #a3760a;
 }
 
 .dark {
-  --background: #0d1a26;
-  --foreground: #e9eef3;
-  --panel: #142230;
-  --panel-2: #1b2c3d;
-  --card: #142230;
-  --card-foreground: #e9eef3;
-  --popover: #142230;
-  --popover-foreground: #e9eef3;
-  --primary: #f2b705;
-  --primary-foreground: #1a1200;
-  --secondary: #1b2c3d;
-  --secondary-foreground: #e9eef3;
-  --muted: #1b2c3d;
-  --muted-foreground: #8fa3b5;
-  --accent: #f2b705;
-  --accent-foreground: #1a1200;
-  --success: #3fb27f;
+  /* Güvenlik Turuncusu — İSG tabelalarının rengi, Uyarı Eğitimleri temasıyla uyumlu */
+  --background: #14181c;
+  --foreground: #eef0f1;
+  --panel: #1e2429;
+  --panel-2: #262c32;
+  --card: #1e2429;
+  --card-foreground: #eef0f1;
+  --popover: #1e2429;
+  --popover-foreground: #eef0f1;
+  --primary: #ff6a1a;
+  --primary-foreground: #200a00;
+  --secondary: #262c32;
+  --secondary-foreground: #eef0f1;
+  --muted: #262c32;
+  --muted-foreground: #8b939a;
+  --accent: #ff6a1a;
+  --accent-foreground: #200a00;
+  --success: #4caf6b;
   --warning: #f2b705;
-  --danger: #e5484d;
-  --destructive: #e5484d;
-  --border: #26394c;
-  --input: #1b2c3d;
-  --ring: #f2b705;
-  --sidebar: #142230;
-  --sidebar-foreground: #e9eef3;
-  --sidebar-primary: #f2b705;
-  --sidebar-primary-foreground: #1a1200;
-  --sidebar-accent: #1b2c3d;
-  --sidebar-accent-foreground: #e9eef3;
-  --sidebar-border: #26394c;
-  --sidebar-ring: #f2b705;
+  --danger: #ff4d4d;
+  --destructive: #ff4d4d;
+  --border: #33393f;
+  --input: #262c32;
+  --ring: #ff6a1a;
+  --chart-1: #ff6a1a;
+  --chart-2: #4caf6b;
+  --chart-3: #ff4d4d;
+  --chart-4: #f2b705;
+  --chart-5: #8b939a;
+  --sidebar: #1e2429;
+  --sidebar-foreground: #eef0f1;
+  --sidebar-primary: #ff6a1a;
+  --sidebar-primary-foreground: #200a00;
+  --sidebar-accent: #262c32;
+  --sidebar-accent-foreground: #eef0f1;
+  --sidebar-border: #33393f;
+  --sidebar-ring: #ff6a1a;
 }
 
 @layer base {
@@ -168,16 +174,16 @@
     background: rgba(0, 0, 0, 0.4);
   }
   .tag-ok {
-    background: rgba(63, 178, 127, 0.18);
+    background: color-mix(in srgb, var(--success) 18%, transparent);
     color: var(--success);
   }
   .tag-warn {
-    background: rgba(242, 183, 5, 0.2);
+    background: color-mix(in srgb, var(--warning) 20%, transparent);
     color: var(--warning);
   }
   .tag-bad,
   .tag-none {
-    background: rgba(229, 72, 77, 0.18);
+    background: color-mix(in srgb, var(--danger) 18%, transparent);
     color: var(--danger);
   }
 }
