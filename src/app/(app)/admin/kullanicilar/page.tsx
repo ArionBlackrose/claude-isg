@@ -41,9 +41,9 @@ export default async function KullanicilarPage() {
           Kullanıcılar
         </h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          Kullanıcıların rolünü buradan değiştirebilirsiniz. Dış kullanıcılar için hangi yetkilere
-          sahip olacaklarını &quot;Yetkiler&quot; ile seçebilirsiniz. Kendi rolünüzü
-          değiştiremezsiniz.
+          Kullanıcıların rolünü buradan değiştirebilirsiniz. Dış kullanıcılar ve normal kullanıcılar
+          için hangi yetkilere/panellere sahip olacaklarını &quot;Yetkiler&quot; ile seçebilirsiniz.
+          Kendi rolünüzü değiştiremezsiniz.
         </p>
         <UserTable
           users={users.map((u) => ({
@@ -52,6 +52,7 @@ export default async function KullanicilarPage() {
             email: u.email,
             role: u.role,
             permissionKeys: permissionsByUserId.get(u.id) ?? [],
+            permissionsConfigured: u.permissionsConfigured,
           }))}
           currentUserId={session.user.id}
         />

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -14,23 +15,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { createUser } from '@/actions/users';
+import { createUser, updateUserPermissions } from '@/actions/users';
+import { PERMISSION_PRESETS } from '@/lib/permissions';
 import { createUserSchema, type CreateUserInput, type CreateUserOutput } from '@/schemas/user';
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Yönetici',
   user: 'Kullanıcı',
   dis: 'Dış Kullanıcı (Eğitim Pasaportu)',
+  ...Object.fromEntries(PERMISSION_PRESETS.map((p) => [p.key, p.label])),
 };
+/** Rol seçicideki değer — gerçek DB rolü ("admin"/"user"/"dis") ya da "user"
+ * rolüyle birlikte belirli bir yetki şablonunu uygulayan bir preset anahtarı
+ * olabilir (bkz. PERMISSION_PRESETS). Form gönderiminde ikisi ayrıştırılır. */
+type RoleFieldValue = 'admin' | 'user' | 'dis' | (typeof PERMISSION_PRESETS)[number]['key'];
 const DEFAULTS: CreateUserInput = { name: '', email: '', role: 'user' };
 
 export function UserCreateForm() {
   const router = useRouter();
+  const [roleField, setRoleField] = useState<RoleFieldValue>('user');
   const {
     register,
     handleSubmit,
     reset,
-    watch,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateUserInput, unknown, CreateUserOutput>({
@@ -38,16 +45,35 @@ export function UserCreateForm() {
     defaultValues: DEFAULTS,
   });
 
+  function handleRoleFieldChange(v: string | null) {
+    if (!v) return;
+    const preset = PERMISSION_PRESETS.find((p) => p.key === v);
+    setRoleField(v as RoleFieldValue);
+    setValue('role', preset ? 'user' : (v as 'admin' | 'user' | 'dis'));
+  }
+
   async function onSubmit(values: CreateUserOutput) {
     const result = await createUser(values);
     if (!result.ok) {
       toast.error(result.error);
       return;
     }
+    const preset = PERMISSION_PRESETS.find((p) => p.key === roleField);
+    if (preset) {
+      const permResult = await updateUserPermissions(result.id, preset.permissionKeys);
+      if (!permResult.ok) {
+        toast.error(`Kullanıcı eklendi ama yetkiler uygulanamadı: ${permResult.error}`);
+        reset(DEFAULTS);
+        setRoleField('user');
+        router.refresh();
+        return;
+      }
+    }
     toast.success(
       `"${values.name}" kullanıcısı eklendi. Giriş kodu, ilk girişte e-postasına gönderilecek.`,
     );
     reset(DEFAULTS);
+    setRoleField('user');
     router.refresh();
   }
 
@@ -68,15 +94,17 @@ export function UserCreateForm() {
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="role">Rol</Label>
-        <Select
-          value={watch('role')}
-          onValueChange={(v) => setValue('role', (v as 'admin' | 'user' | 'dis') ?? 'user')}
-        >
+        <Select value={roleField} onValueChange={handleRoleFieldChange}>
           <SelectTrigger id="role" className="w-full">
             <SelectValue>{(v: string) => ROLE_LABELS[v] ?? v}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="user">Kullanıcı</SelectItem>
+            {PERMISSION_PRESETS.map((preset) => (
+              <SelectItem key={preset.key} value={preset.key}>
+                {preset.label}
+              </SelectItem>
+            ))}
             <SelectItem value="admin">Yönetici</SelectItem>
             <SelectItem value="dis">Dış Kullanıcı (Eğitim Pasaportu)</SelectItem>
           </SelectContent>
