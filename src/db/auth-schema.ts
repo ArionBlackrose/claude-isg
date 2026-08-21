@@ -21,6 +21,16 @@ export const user = sqliteTable('user', {
   // anlamlı: doluysa, o hesabın pasaport sorguları sadece bu firmadaki
   // personelle sınırlanır (çapraz firma veri sızıntısını önlemek için).
   firma: text('firma'),
+  // Admin "Kullanıcılar" sayfasındaki Yetkiler diyaloğundan bu hesabın
+  // granüler yetkilerini en az bir kez kaydedip kaydetmediğini işaretler.
+  // false iken (varsayılan / hiç dokunulmamış) hesap geriye dönük
+  // uyumluluk için tüm panellere erişebilir — bu alan eklendiğinde mevcut
+  // hesapların erişimi sessizce daralmaz. true olduğunda erişim sadece
+  // user_permission tablosunda işaretli panellerle sınırlanır (bkz.
+  // src/lib/session.ts requirePanelAccess).
+  permissionsConfigured: integer('permissions_configured', { mode: 'boolean' })
+    .notNull()
+    .default(false),
 });
 
 export const session = sqliteTable(

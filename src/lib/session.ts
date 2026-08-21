@@ -5,6 +5,8 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { user } from '@/db/auth-schema';
 import { auth } from './auth';
+import { getGrantedPermissionKeys } from './user-permissions';
+import { getPermissionDefaultWhenUnconfigured, type PermissionKey } from './permissions';
 
 // GEÇİCİ: E-posta kodu ile giriş askıya alındı, tüm istekler otomatik
 // olarak ilk admin kullanıcı olarak oturum açmış sayılıyor. Gerçek girişi
@@ -31,6 +33,7 @@ async function bypassSession() {
       email: devUser.email,
       role: devUser.role,
       firma: devUser.firma,
+      permissionsConfigured: devUser.permissionsConfigured,
     },
     session: { id: 'dev-bypass', userId: devUser.id },
   };
@@ -72,6 +75,59 @@ export async function requireInternalSession() {
   const session = await requireSession();
   if (session.user.role === 'dis') redirect('/pasaport');
   return session;
+}
+
+/** requirePanelAccess ve hasPermission arasında paylaşılan asıl kontrol —
+ * admin her zaman geçer; yetkileri hiç yapılandırılmamış (permissionsConfigured
+ * =false) bir hesap için PERMISSION_CATALOG'daki `defaultWhenUnconfigured`
+ * alanına bakılır (bazı yetkiler geriye dönük uyumluluk için varsayılan
+ * açık, bazıları — ör. uyari.duzenle — önceden daha sıkı bir kuralla
+ * korunuyordu ve varsayılan kapalıdır); aksi halde gerçek granüler yetki
+ * setine bakılır. */
+async function isPermissionGranted(
+  session: Awaited<ReturnType<typeof requireSession>>,
+  key: PermissionKey,
+): Promise<boolean> {
+  if (session.user.role === 'admin') return true;
+  if (!('permissionsConfigured' in session.user) || !session.user.permissionsConfigured) {
+    return getPermissionDefaultWhenUnconfigured(key);
+  }
+  const granted = await getGrantedPermissionKeys(session.user.role, session.user.id);
+  return granted.has(key);
+}
+
+/** "user" rolündeki hesaplar için panel bazlı erişim kontrolü — admin'in
+ * "Kullanıcılar" sayfasındaki Yetkiler diyaloğundan atadığı panel.*
+ * yetkilerini uygular. Hesabın yetkileri hiç yapılandırılmamışsa
+ * (permissionsConfigured=false, varsayılan durum) geriye dönük uyumluluk
+ * için TÜM panellere erişim varsayılır — bu özellik eklendiğinde mevcut
+ * hesapların erişimi sessizce daralmaz. Admin bir kez "Yetkiler" kaydettiği
+ * andan itibaren hesap sadece işaretlenen panellere erişebilir.
+ *
+ * requireInternalSession'ın kendi belgesindeki uyarı burada da geçerlidir:
+ * server action'lar sayfa render zincirinden bağımsız doğrudan
+ * çağrılabildiği için, bu paneldeki (ve o panele özgü, başka panelle
+ * paylaşılmayan) her mutasyon action'ı bu korumayı da kendi içinde
+ * uygulamalı — sadece page.tsx'te çağırmak yeterli değildir. */
+export async function requirePanelAccess(panelKey: PermissionKey) {
+  const session = await requireInternalSession();
+  if (!(await isPermissionGranted(session, panelKey))) redirect('/');
+  return session;
+}
+
+/** Sayfa render zincirinden bağımsız, bir server action içinden çağrılan
+ * ince taneli yetki kontrolü — requirePanelAccess'ten farkı, erişim
+ * reddedildiğinde redirect atmak yerine `false` dönmesidir; action'lar
+ * bunu kullanıp kendi ActionResult hata mesajını üretebilir (bkz.
+ * src/actions/records.ts'teki kayit.duzenle / uyari.giris / uyari.duzenle
+ * kontrolleri). requirePanelAccess'in aksine burada requireInternalSession
+ * ÇAĞRILMAZ — çağıran taraf zaten kendi session'ını (ör. requirePanelAccess
+ * ile) almış olmalıdır. */
+export async function hasPermission(
+  session: Awaited<ReturnType<typeof requireSession>>,
+  key: PermissionKey,
+): Promise<boolean> {
+  return isPermissionGranted(session, key);
 }
 
 export { canDeletePersonnel, canDeleteTraining } from './permissions';

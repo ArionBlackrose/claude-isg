@@ -28,6 +28,11 @@ export const auth = betterAuth({
         required: false,
         input: false,
       },
+      permissionsConfigured: {
+        type: 'boolean',
+        defaultValue: false,
+        input: false,
+      },
     },
   },
   plugins: [

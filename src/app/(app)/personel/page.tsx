@@ -9,7 +9,7 @@ import {
   trainingRecord,
   user,
 } from '@/db/schema';
-import { canDeletePersonnel, getSession } from '@/lib/session';
+import { canDeletePersonnel, requirePanelAccess } from '@/lib/session';
 import { PersonelForm } from '@/components/personel/personel-form';
 import { PersonelTable, type PersonelRow } from '@/components/personel/personel-table';
 import { ExcelSyncPersonel } from '@/components/personel/excel-sync-personel';
@@ -19,7 +19,7 @@ export const metadata: Metadata = { title: 'Personel' };
 export default async function PersonelPage() {
   const [session, allPersonnel, allHistory, allTrainings, allRecords, allUsers, allDiscipline] =
     await Promise.all([
-      getSession(),
+      requirePanelAccess('panel.personel'),
       db.select().from(personnel),
       db.select().from(personnelHistory),
       db.select().from(training),
@@ -78,8 +78,8 @@ export default async function PersonelPage() {
     };
   });
 
-  const isAdmin = session?.user.role === 'admin';
-  const canDelete = isAdmin && canDeletePersonnel(session?.user.email ?? '');
+  const isAdmin = session.user.role === 'admin';
+  const canDelete = isAdmin && canDeletePersonnel(session.user.email);
 
   return (
     <div className="space-y-4">

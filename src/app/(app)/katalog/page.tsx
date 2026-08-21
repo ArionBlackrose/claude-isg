@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { canDeleteTraining, getSession } from '@/lib/session';
+import { canDeleteTraining, requirePanelAccess } from '@/lib/session';
 import { statusFor } from '@/lib/training-status';
 import { KatalogForm } from '@/components/katalog/katalog-form';
 import { KatalogTable, type KatalogRow } from '@/components/katalog/katalog-table';
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: 'Eğitim Kataloğu' };
 
 export default async function KatalogPage() {
   const [session, trainings, activePersonnel, records] = await Promise.all([
-    getSession(),
+    requirePanelAccess('panel.katalog'),
     db.select().from(training).orderBy(training.ad),
     db.select().from(personnel).where(eq(personnel.durum, 'Güncel')),
     db.select().from(trainingRecord),
@@ -37,8 +37,8 @@ export default async function KatalogPage() {
     };
   });
 
-  const isAdmin = session?.user.role === 'admin';
-  const canDelete = isAdmin && canDeleteTraining(session?.user.email ?? '');
+  const isAdmin = session.user.role === 'admin';
+  const canDelete = isAdmin && canDeleteTraining(session.user.email);
 
   return (
     <div className="space-y-4">

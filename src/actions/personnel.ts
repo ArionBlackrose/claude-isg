@@ -4,7 +4,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { personnel, personnelHistory } from '@/db/schema';
-import { canDeletePersonnel, requireAdmin, requireInternalSession } from '@/lib/session';
+import { canDeletePersonnel, requireAdmin, requirePanelAccess } from '@/lib/session';
 import { normName, splitName } from '@/lib/excel';
 import { todayStr } from '@/lib/training-status';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
@@ -32,7 +32,7 @@ async function findTcConflict(tcNo: string | undefined, excludeId?: string) {
 }
 
 export async function createPersonnel(input: unknown): Promise<CreateResult> {
-  const session = await requireInternalSession();
+  const session = await requirePanelAccess('panel.personel');
   const parsed = personnelSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -61,7 +61,7 @@ export async function createPersonnel(input: unknown): Promise<CreateResult> {
 }
 
 export async function updatePersonnel(id: string, input: unknown): Promise<ActionResult> {
-  const session = await requireInternalSession();
+  const session = await requirePanelAccess('panel.personel');
   const parsed = personnelSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -226,7 +226,7 @@ export async function uploadPersonnelMykBelgesi(
   personnelId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireInternalSession();
+  const session = await requirePanelAccess('panel.personel');
   const file = formData.get('file');
   if (!(file instanceof File)) {
     return { ok: false, error: 'Dosya bulunamadı.' };
@@ -299,7 +299,7 @@ export async function uploadPersonnelMykBelgesi(
 }
 
 export async function deletePersonnelMykBelgesi(personnelId: string): Promise<ActionResult> {
-  const session = await requireInternalSession();
+  const session = await requirePanelAccess('panel.personel');
   const [existing] = await db.select().from(personnel).where(eq(personnel.id, personnelId));
   if (!existing) {
     return { ok: false, error: 'Personel bulunamadı.' };
@@ -334,7 +334,7 @@ export async function setMykBelgeGecerlilikTarihi(
   personnelId: string,
   gecerlilikTarihi: string | null,
 ): Promise<ActionResult> {
-  const session = await requireInternalSession();
+  const session = await requirePanelAccess('panel.personel');
   if (gecerlilikTarihi && Number.isNaN(new Date(`${gecerlilikTarihi}T00:00:00`).getTime())) {
     return { ok: false, error: 'Geçersiz tarih.' };
   }

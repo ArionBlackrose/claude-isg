@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `permissions_configured` integer DEFAULT false NOT NULL;

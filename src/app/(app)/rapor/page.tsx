@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
 import { RaporView } from '@/components/rapor/rapor-view';
 import { getProjectSettings } from '@/actions/project';
+import { requirePanelAccess } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'Rapor' };
 
@@ -11,6 +12,7 @@ export default async function RaporPage({
 }: {
   searchParams: Promise<{ egitim?: string; durum?: string }>;
 }) {
+  await requirePanelAccess('panel.rapor');
   const params = await searchParams;
   const [allPersonnel, trainings, records, projectSettings] = await Promise.all([
     db.select().from(personnel),

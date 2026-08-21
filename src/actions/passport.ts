@@ -2,10 +2,10 @@
 
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { personnel, training, trainingRecord, userPermission } from '@/db/schema';
+import { personnel, training, trainingRecord } from '@/db/schema';
 import { requireSession } from '@/lib/session';
 import { statusFor, type TrainingStatusCode } from '@/lib/training-status';
-import { ALL_PERMISSION_KEYS, isValidPermissionKey, type PermissionKey } from '@/lib/permissions';
+import { getGrantedPermissionKeys } from '@/lib/user-permissions';
 
 export type PassportSearchInput = {
   tcNo?: string;
@@ -47,24 +47,6 @@ async function requireExternalAccess() {
   return session;
 }
 
-/** "dis" hesabının admin tarafından atanmış yetki anahtarlarını döner.
- * Adminler için bu kavram uygulanmaz — admin her zaman tüm alanları görür
- * ve dışa aktarabilir, bu yüzden PERMISSION_CATALOG'daki her anahtar
- * verilmiş sayılır. */
-async function getEffectivePermissionKeys(
-  role: string,
-  userId: string,
-): Promise<Set<PermissionKey>> {
-  if (role === 'admin') {
-    return new Set(ALL_PERMISSION_KEYS);
-  }
-  const rows = await db
-    .select({ permissionKey: userPermission.permissionKey })
-    .from(userPermission)
-    .where(eq(userPermission.userId, userId));
-  return new Set(rows.map((r) => r.permissionKey).filter(isValidPermissionKey));
-}
-
 export type PassportSearchResponse = {
   results: PassportResult[];
   /** Admin'in bu hesap için "Sonuçları Excel olarak indirebilir" yetkisini
@@ -82,7 +64,7 @@ export type PassportSearchResponse = {
  * "Kullanıcılar" sayfasından bu hesaba verdiği yetkilere göre kısıtlanır. */
 export async function searchPassport(input: PassportSearchInput): Promise<PassportSearchResponse> {
   const session = await requireExternalAccess();
-  const permissionKeys = await getEffectivePermissionKeys(session.user.role, session.user.id);
+  const permissionKeys = await getGrantedPermissionKeys(session.user.role, session.user.id);
   const canSeeTcNo = permissionKeys.has('pasaport.tc_no_gor');
   const canSeeGorev = permissionKeys.has('pasaport.gorev_gor');
   const canSeeFirma = permissionKeys.has('pasaport.firma_gor');

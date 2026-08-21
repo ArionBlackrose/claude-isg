@@ -14,10 +14,12 @@ import {
 } from '@/components/ui/table';
 import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
 import { RESTRICTED_TRAINING_CATEGORY } from '@/lib/training-category-rules';
+import { requirePanelAccess } from '@/lib/session';
 
 export const metadata: Metadata = { title: 'Eğitim Ekle' };
 
 export default async function KayitEklePage() {
+  await requirePanelAccess('panel.egitim_ekle');
   const [allPersonnel, trainings, recentRecords] = await Promise.all([
     db.select().from(personnel),
     db.select().from(training).orderBy(training.ad),
