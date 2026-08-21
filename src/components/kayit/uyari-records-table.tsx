@@ -57,9 +57,13 @@ type Draft = {
 export function UyariRecordsTable({
   records,
   isAdmin,
+  canEdit,
 }: {
   records: UyariRecordRow[];
   isAdmin: boolean;
+  /** uyari.duzenle yetkisi — "Düzenle" butonunu kontrol eder. Silme her
+   * zaman admin'e kilitli olduğundan "Sil" butonu ayrıca isAdmin'e bakar. */
+  canEdit: boolean;
 }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -316,20 +320,24 @@ export function UyariRecordsTable({
                           <div>{r.createdByName}</div>
                         </div>
                       </div>
-                      {isAdmin && (
+                      {(canEdit || isAdmin) && (
                         <div className="mt-3 flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
-                            Düzenle
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-danger text-danger hover:bg-danger/10"
-                            disabled={isPending}
-                            onClick={() => handleDelete(r)}
-                          >
-                            Sil
-                          </Button>
+                          {canEdit && (
+                            <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
+                              Düzenle
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-danger text-danger hover:bg-danger/10"
+                              disabled={isPending}
+                              onClick={() => handleDelete(r)}
+                            >
+                              Sil
+                            </Button>
+                          )}
                         </div>
                       )}
                     </>
@@ -351,7 +359,7 @@ export function UyariRecordsTable({
                 <TableHead>Dosya No</TableHead>
                 <TableHead>Not</TableHead>
                 <TableHead>Girişi Yapan</TableHead>
-                {isAdmin && <TableHead />}
+                {(canEdit || isAdmin) && <TableHead />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -439,20 +447,24 @@ export function UyariRecordsTable({
                     <TableCell className="text-muted-foreground">{r.dosyaNo || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{r.createdByName}</TableCell>
-                    {isAdmin && (
+                    {(canEdit || isAdmin) && (
                       <TableCell className="space-x-2 whitespace-nowrap">
-                        <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
-                          Düzenle
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-danger text-danger hover:bg-danger/10"
-                          disabled={isPending}
-                          onClick={() => handleDelete(r)}
-                        >
-                          Sil
-                        </Button>
+                        {canEdit && (
+                          <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
+                            Düzenle
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-danger text-danger hover:bg-danger/10"
+                            disabled={isPending}
+                            onClick={() => handleDelete(r)}
+                          >
+                            Sil
+                          </Button>
+                        )}
                       </TableCell>
                     )}
                   </TableRow>

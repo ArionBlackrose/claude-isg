@@ -4,11 +4,17 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
-import { requireAdmin, requireInternalSession } from '@/lib/session';
+import {
+  hasPermission,
+  requireAdmin,
+  requireInternalSession,
+  requirePanelAccess,
+} from '@/lib/session';
 import { normName } from '@/lib/excel';
 import { logActivity, diffSummary } from '@/lib/audit';
 import { recordSchema, recordUpdateSchema, recordsBatchSchema } from '@/schemas/record';
 import {
+  canUploadCertificate,
   getDosyaNoError,
   getGeneralCreationError,
   getGeneralSonucError,
@@ -42,8 +48,24 @@ async function recordLabel(personnelId: string, trainingId: string): Promise<str
   return `${personLabel} — ${trainingLabel}`;
 }
 
+// createRecord/uploadRecordCertificate sadece Kayıtlar sayfasındaki hücre
+// diyaloğundan ("Yeni Kayıt Ekle" / sertifika yükleme) çağrılır, başka bir
+// panelle paylaşılmaz — bu yüzden panel.kayitlar ile kapıya alınabilir.
+// createRecord ayrıca kayit.duzenle de arar: "Veri Giriş Sorumlusu" gibi
+// kasıtlı olarak salt-görüntüleme amaçlı bir preset, Kayıtlar panelindeki
+// bir hücreye tıklayıp "+ Yeni Kayıt Ekle" ile o hücreye kayıt eklemesin
+// diye — panel erişimi tek başına "düzenleyemez" vaadini korumaya yetmez.
+// updateRecord Kayıtlar, Personel detayı ve Uyarı panelleri arasında
+// paylaşıldığından PANEL bazlı kısıtlanmaz (requireInternalSession yeterli)
+// — ama düzenlenen kaydın kategorisine göre (bkz. RESTRICTED_TRAINING_
+// CATEGORY) kayit.duzenle/uyari.duzenle yetkilerinden biri aranır, böylece
+// hangi ekrandan çağrıldığından bağımsız olarak doğru izin uygulanır.
+// deleteRecord (silme, geri alınamaz) kasıtlı olarak admin'e kilitlidir.
 export async function createRecord(input: unknown): Promise<ActionResult> {
-  const session = await requireInternalSession();
+  const session = await requirePanelAccess('panel.kayitlar');
+  if (!(await hasPermission(session, 'kayit.duzenle'))) {
+    return { ok: false, error: 'Kayıt ekleme yetkiniz yok.' };
+  }
   const parsed = recordSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -104,7 +126,10 @@ async function createRecordsInternal(
   input: unknown,
   mode: 'general' | 'uyari',
 ): Promise<RecordsBatchResult> {
-  const session = await requireInternalSession();
+  const session = await requirePanelAccess(mode === 'uyari' ? 'panel.uyari' : 'panel.egitim_ekle');
+  if (mode === 'uyari' && !(await hasPermission(session, 'uyari.giris'))) {
+    return { ok: false, error: 'Uyarı eğitimi girişi yapma yetkiniz yok.' };
+  }
   const parsed = recordsBatchSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'Geçersiz veri.' };
@@ -217,8 +242,14 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
     .from(training)
     .where(eq(training.id, existing.trainingId));
   const isUyariRecord = existingTraining?.kategori === RESTRICTED_TRAINING_CATEGORY;
-  if (isUyariRecord && session.user.role !== 'admin') {
-    return { ok: false, error: 'Uyarı eğitimi kayıtlarını sadece admin düzenleyebilir.' };
+  const editPermission = isUyariRecord ? 'uyari.duzenle' : 'kayit.duzenle';
+  if (!(await hasPermission(session, editPermission))) {
+    return {
+      ok: false,
+      error: isUyariRecord
+        ? 'Uyarı eğitimi kayıtlarını düzenleme yetkiniz yok.'
+        : 'Kayıt düzenleme yetkiniz yok.',
+    };
   }
   const sonucError = isUyariRecord
     ? getUyariSonucError(parsed.data.sonuc)
@@ -295,7 +326,7 @@ export async function uploadRecordCertificate(
   recordId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  const session = await requireInternalSession();
+  const session = await requirePanelAccess('panel.kayitlar');
   const file = formData.get('file');
   if (!(file instanceof File)) {
     return { ok: false, error: 'Dosya bulunamadı.' };
@@ -307,6 +338,17 @@ export async function uploadRecordCertificate(
   const [existing] = await db.select().from(trainingRecord).where(eq(trainingRecord.id, recordId));
   if (!existing) {
     return { ok: false, error: 'Kayıt bulunamadı.' };
+  }
+  const [existingTraining] = await db
+    .select()
+    .from(training)
+    .where(eq(training.id, existing.trainingId));
+  if (!canUploadCertificate(existingTraining?.kategori)) {
+    return {
+      ok: false,
+      error:
+        'Sertifika yükleme sadece Zorunlu ve 3. Taraf kategorisindeki eğitimler için geçerlidir.',
+    };
   }
 
   try {
@@ -350,7 +392,7 @@ const VALID_SONUC = new Set(['Başarılı', 'Başarısız', 'Katılmadı']);
 export async function importRecordsFromExcel(
   rows: RecordExcelRawRow[],
 ): Promise<RecordImportResult> {
-  const session = await requireInternalSession();
+  const session = await requirePanelAccess('panel.egitim_ekle');
 
   if (!Array.isArray(rows) || !rows.length) {
     return { ok: false, error: 'Excel dosyasında satır bulunamadı.' };

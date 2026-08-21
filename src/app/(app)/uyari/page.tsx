@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
 import { disciplineAction, personnel, training, trainingRecord, user } from '@/db/schema';
-import { getSession } from '@/lib/session';
+import { hasPermission, requirePanelAccess } from '@/lib/session';
 import { KayitForm } from '@/components/kayit/kayit-form';
 import { UyariRecordsTable, type UyariRecordRow } from '@/components/kayit/uyari-records-table';
 import {
@@ -18,6 +18,12 @@ const UYARI_PENCERE_AY = -3;
 export const metadata: Metadata = { title: 'Uyarı Eğitimleri' };
 
 export default async function UyariEgitimleriPage() {
+  const session = await requirePanelAccess('panel.uyari');
+  const [canGiris, canDuzenle] = await Promise.all([
+    hasPermission(session, 'uyari.giris'),
+    hasPermission(session, 'uyari.duzenle'),
+  ]);
+
   // Uyarı kategorisindeki eğitim kimlikleri, kayıt sorgusunu DB seviyesinde
   // daraltmak için önce tek başına çekilir — aksi halde trainingRecord'un
   // tamamını (tüm kategoriler, tüm personel) çekip istemci tarafında
@@ -29,8 +35,7 @@ export default async function UyariEgitimleriPage() {
     .orderBy(training.ad);
   const uyariTrainingIds = uyariTrainings.map((t) => t.id);
 
-  const [session, allPersonnel, allUsers, uyariRecords, disciplineActions] = await Promise.all([
-    getSession(),
+  const [allPersonnel, allUsers, uyariRecords, disciplineActions] = await Promise.all([
     db.select().from(personnel),
     db.select().from(user),
     uyariTrainingIds.length
@@ -47,7 +52,7 @@ export default async function UyariEgitimleriPage() {
   const personnelMap = new Map(allPersonnel.map((p) => [p.id, p]));
   const userMap = new Map(allUsers.map((u) => [u.id, u]));
 
-  const isAdmin = session?.user.role === 'admin';
+  const isAdmin = session.user.role === 'admin';
 
   const activePersonnel = allPersonnel
     .filter((p) => p.durum === 'Güncel')
@@ -136,41 +141,43 @@ export default async function UyariEgitimleriPage() {
         <UyariDisciplinePanel rows={flaggedRows} />
       </div>
 
-      <div className="rounded-lg border border-border bg-panel p-5">
-        <h2 className="mb-1 font-heading text-xl font-bold tracking-wide uppercase">
-          Uyarı Eğitimi Ekle
-        </h2>
-        <p className="mb-4 text-xs text-muted-foreground">
-          Uyarı eğitimi kayıtları sadece bu panelden eklenebilir. Eklenen kayıtlar Kayıtlar
-          sayfasında ve personelin detay görünümünde de görünür.
-        </p>
-        {!uyariTrainings.length ? (
-          <div className="p-8 text-center text-muted-foreground">
-            Henüz Uyarı kategorisinde bir eğitim türü yok — önce Eğitim Kataloğu&apos;na kategorisi
-            &quot;Uyarı&quot; olan bir eğitim ekleyin.
-          </div>
-        ) : (
-          <KayitForm
-            personnel={activePersonnel.map((p) => ({
-              id: p.id,
-              ad: p.ad,
-              soyad: p.soyad,
-              tcNo: p.tcNo,
-              firma: p.firma,
-            }))}
-            trainings={uyariTrainings.map((t) => ({ id: t.id, ad: t.ad }))}
-            submitAction={createUyariRecords}
-            hideQuickAdd
-            mode="uyari"
-          />
-        )}
-      </div>
+      {canGiris && (
+        <div className="rounded-lg border border-border bg-panel p-5">
+          <h2 className="mb-1 font-heading text-xl font-bold tracking-wide uppercase">
+            Uyarı Eğitimi Ekle
+          </h2>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Uyarı eğitimi kayıtları sadece bu panelden eklenebilir. Eklenen kayıtlar Kayıtlar
+            sayfasında ve personelin detay görünümünde de görünür.
+          </p>
+          {!uyariTrainings.length ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Henüz Uyarı kategorisinde bir eğitim türü yok — önce Eğitim Kataloğu&apos;na
+              kategorisi &quot;Uyarı&quot; olan bir eğitim ekleyin.
+            </div>
+          ) : (
+            <KayitForm
+              personnel={activePersonnel.map((p) => ({
+                id: p.id,
+                ad: p.ad,
+                soyad: p.soyad,
+                tcNo: p.tcNo,
+                firma: p.firma,
+              }))}
+              trainings={uyariTrainings.map((t) => ({ id: t.id, ad: t.ad }))}
+              submitAction={createUyariRecords}
+              hideQuickAdd
+              mode="uyari"
+            />
+          )}
+        </div>
+      )}
 
       <div className="rounded-lg border border-border bg-panel p-5">
         <h2 className="mb-4 font-heading text-xl font-bold tracking-wide uppercase">
           Tüm Uyarı Eğitimi Kayıtları
         </h2>
-        <UyariRecordsTable records={records} isAdmin={isAdmin} />
+        <UyariRecordsTable records={records} isAdmin={isAdmin} canEdit={canDuzenle} />
       </div>
     </div>
   );

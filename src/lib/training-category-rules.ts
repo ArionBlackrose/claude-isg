@@ -59,3 +59,19 @@ export function getDosyaNoError(
 ): string | null {
   return isDosyaNoRequired(mode, sonuc) && !dosyaNo?.trim() ? 'Dosya No zorunlu.' : null;
 }
+
+/** Sertifika yükleme sadece bu iki kategori için anlamlıdır — Temel İSG
+ * eğitimleri "Zorunlu" kategorisinde tutulur, dış kurum/yüklenici eğitimleri
+ * ise "3. Taraf" kategorisinde. Diğer kategorilerde (Genel, Özel, Uyarı)
+ * sertifika yükleme seçeneği ne gösterilir ne de sunucu tarafında kabul
+ * edilir — src/components/log/kayit-edit-dialog.tsx (UI) ve
+ * src/actions/records.ts uploadRecordCertificate (sunucu) bu tek kaynağı
+ * paylaşır. */
+export const CERTIFICATE_UPLOAD_CATEGORIES = ['Zorunlu', '3. Taraf'] as const;
+
+export function canUploadCertificate(kategori: string | undefined): boolean {
+  return (
+    kategori !== undefined &&
+    (CERTIFICATE_UPLOAD_CATEGORIES as readonly string[]).includes(kategori)
+  );
+}

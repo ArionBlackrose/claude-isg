@@ -23,7 +23,11 @@ import {
 } from '@/actions/records';
 import { todayStr } from '@/lib/training-status';
 import { useConfirm } from '@/hooks/use-confirm';
-import { isDosyaNoRequired, RESTRICTED_TRAINING_CATEGORY } from '@/lib/training-category-rules';
+import {
+  canUploadCertificate,
+  isDosyaNoRequired,
+  RESTRICTED_TRAINING_CATEGORY,
+} from '@/lib/training-category-rules';
 import type { LogRecord } from './log-table';
 
 export function KayitEditDialog({
@@ -36,6 +40,8 @@ export function KayitEditDialog({
   trainingKategori,
   records,
   isAdmin,
+  canEditGeneral,
+  canEditUyari,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,9 +52,14 @@ export function KayitEditDialog({
   trainingKategori: string;
   records: LogRecord[];
   isAdmin: boolean;
+  /** kayit.duzenle yetkisi — genel (Uyarı dışı) kayıtları düzenleyebilme. */
+  canEditGeneral: boolean;
+  /** uyari.duzenle yetkisi — Uyarı kategorisindeki kayıtları düzenleyebilme. */
+  canEditUyari: boolean;
 }) {
   const isUyari = trainingKategori === RESTRICTED_TRAINING_CATEGORY;
   const mode: 'general' | 'uyari' = isUyari ? 'uyari' : 'general';
+  const certificateEligible = canUploadCertificate(trainingKategori);
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<
@@ -177,7 +188,8 @@ export function KayitEditDialog({
             .sort((a, b) => b.tarih.localeCompare(a.tarih))
             .map((r) => {
               const draft = draftFor(r);
-              const readOnly = isUyari && !isAdmin;
+              const canEditThis = isUyari ? canEditUyari : canEditGeneral;
+              const readOnly = !canEditThis;
               return (
                 <div
                   key={r.id}
@@ -265,7 +277,7 @@ export function KayitEditDialog({
                       }
                     />
                   </div>
-                  {(!isUyari || isAdmin) && (
+                  {canEditThis && (
                     <Button size="sm" disabled={pendingId === r.id} onClick={() => handleSave(r)}>
                       Kaydet
                     </Button>
@@ -281,33 +293,37 @@ export function KayitEditDialog({
                       Sil
                     </Button>
                   )}
-                  <div className="col-span-full flex items-center gap-2.5 text-xs">
-                    {r.driveWebViewLink ? (
-                      <a
-                        href={r.driveWebViewLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        Sertifikayı Görüntüle
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">Sertifika yüklenmedi</span>
-                    )}
-                    <label className="cursor-pointer text-muted-foreground hover:text-foreground">
-                      {r.driveWebViewLink ? 'Değiştir' : 'Sertifika yükle'}
-                      <input
-                        type="file"
-                        className="hidden"
-                        disabled={pendingId === r.id}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleCertificateUpload(r, file);
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-                  </div>
+                  {(certificateEligible || r.driveWebViewLink) && (
+                    <div className="col-span-full flex items-center gap-2.5 text-xs">
+                      {r.driveWebViewLink ? (
+                        <a
+                          href={r.driveWebViewLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Sertifikayı Görüntüle
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">Sertifika yüklenmedi</span>
+                      )}
+                      {certificateEligible && (
+                        <label className="cursor-pointer text-muted-foreground hover:text-foreground">
+                          {r.driveWebViewLink ? 'Değiştir' : 'Sertifika yükle'}
+                          <input
+                            type="file"
+                            className="hidden"
+                            disabled={pendingId === r.id}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleCertificateUpload(r, file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -320,7 +336,7 @@ export function KayitEditDialog({
               </Link>{' '}
               panelinden eklenebilir.
             </p>
-          ) : (
+          ) : !canEditGeneral ? null : (
             <div className="pt-1">
               <p className="mb-2 text-xs font-semibold text-muted-foreground">+ Yeni Kayıt Ekle</p>
               <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_1.4fr_auto]">

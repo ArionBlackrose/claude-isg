@@ -77,11 +77,15 @@ export function LogTable({
   trainings,
   records,
   isAdmin,
+  canEditGeneral,
+  canEditUyari,
 }: {
   personnel: LogPersonel[];
   trainings: LogTraining[];
   records: LogRecord[];
   isAdmin: boolean;
+  canEditGeneral: boolean;
+  canEditUyari: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [durumFilter, setDurumFilter] = useState('all');
@@ -549,6 +553,8 @@ export function LogTable({
             (r) => r.personnelId === editing.personnelId && r.trainingId === editing.trainingId,
           )}
           isAdmin={isAdmin}
+          canEditGeneral={canEditGeneral}
+          canEditUyari={canEditUyari}
         />
       )}
     </div>

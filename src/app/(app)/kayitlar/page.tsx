@@ -1,22 +1,26 @@
 import type { Metadata } from 'next';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
-import { getSession } from '@/lib/session';
+import { hasPermission, requirePanelAccess } from '@/lib/session';
 import { LogTable } from '@/components/log/log-table';
 
 export const metadata: Metadata = { title: 'Kayıtlar' };
 
 export default async function KayitlarPage() {
   const [session, allPersonnel, trainings, records] = await Promise.all([
-    getSession(),
+    requirePanelAccess('panel.kayitlar'),
     db.select().from(personnel),
     db.select().from(training).orderBy(training.ad),
     db.select().from(trainingRecord),
   ]);
+  const [canEditGeneral, canEditUyari] = await Promise.all([
+    hasPermission(session, 'kayit.duzenle'),
+    hasPermission(session, 'uyari.duzenle'),
+  ]);
 
   allPersonnel.sort((a, b) => `${a.ad}${a.soyad}`.localeCompare(`${b.ad}${b.soyad}`, 'tr'));
 
-  const isAdmin = session?.user.role === 'admin';
+  const isAdmin = session.user.role === 'admin';
 
   return (
     <div className="rounded-lg border border-border bg-panel p-5">
@@ -32,6 +36,8 @@ export default async function KayitlarPage() {
         trainings={trainings}
         records={records}
         isAdmin={isAdmin}
+        canEditGeneral={canEditGeneral}
+        canEditUyari={canEditUyari}
       />
     </div>
   );
