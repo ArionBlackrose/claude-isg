@@ -7,11 +7,7 @@ import { user, userPermission } from '@/db/schema';
 import { requireAdmin } from '@/lib/session';
 import { logActivity, diffSummary } from '@/lib/audit';
 import { createUserSchema, updateUserSchema } from '@/schemas/user';
-import {
-  getPermissionKeysForRole,
-  PERMISSION_CATALOG,
-  PERMISSION_PRESETS,
-} from '@/lib/permissions';
+import { getPermissionKeysForRole, PERMISSION_CATALOG } from '@/lib/permissions';
 import type { ActionResult, CreateResult } from './training';
 
 async function findEmailConflict(email: string, excludeId?: string) {
@@ -187,6 +183,34 @@ export async function updateUserPermissions(
   return { ok: true };
 }
 
+/** Bir kullanıcı hesabını kalıcı olarak siler — oturumları, hesap
+ * bağlantılarını (better-auth) ve granüler yetki satırlarını da (ON DELETE
+ * CASCADE, bkz. src/db/schema.ts) birlikte götürür. Personel/eğitim
+ * silmenin aksine ayrı bir e-posta whitelist'i yoktur — bu sayfa zaten
+ * yalnızca "admin" (Yönetici) rolündeki hesaplara açıktır (bkz.
+ * src/app/(app)/admin/layout.tsx requireAdmin), o yeterli kısıtlamadır. */
+export async function deleteUser(userId: string): Promise<ActionResult> {
+  const session = await requireAdmin();
+  if (session.user.id === userId) {
+    return { ok: false, error: 'Kendi hesabınızı silemezsiniz.' };
+  }
+  const [existing] = await db.select().from(user).where(eq(user.id, userId));
+  if (!existing) {
+    return { ok: false, error: 'Kullanıcı bulunamadı.' };
+  }
+  await db.delete(user).where(eq(user.id, userId));
+  revalidatePath('/admin/kullanicilar');
+  await logActivity(
+    session,
+    'delete',
+    'kullanici',
+    userId,
+    existing.name,
+    `Kullanıcı hesabı silindi (${existing.email}, rol: ${existing.role}).`,
+  );
+  return { ok: true };
+}
+
 export async function updateUserRole(
   userId: string,
   role: 'admin' | 'user' | 'dis',
@@ -246,23 +270,32 @@ export async function updateUserRole(
   return { ok: true };
 }
 
-/** Admin panelindeki "Roller" satırının (bkz.
+/** Admin panelindeki "Roller" satırının + Yetkiler diyaloğunun (bkz.
  * src/components/admin/user-permissions-dialog.tsx ve user-table.tsx) tek
- * gerçek kaynağı — bir temel rol (Yönetici/Kullanıcı/Dış Kullanıcı) ya da
- * bir yetki şablonu (Editör, Kontrolör vb.) seçildiğinde rol değişimi ve
- * yetki setinin uygulanmasını TEK bir db.transaction içinde yapar.
+ * gerçek kaynağı — bir rol (Yönetici/Kullanıcı/Dış Kullanıcı) ve/veya yetki
+ * setini TEK bir db.transaction içinde, TEK "Kaydet" tıkında uygular. Rol
+ * seçimi veya bir yetki şablonuna tıklamak SADECE istemcideki yerel taslağı
+ * (state) günceller — bu action çağrılana kadar veritabanında hiçbir şey
+ * değişmez; admin "Kaydet"e basmadan yetki tanımlanmış/kaydedilmiş olmaz.
  *
- * Bundan önce bu ikisi (updateUserRole + updateUserPermissions/
- * resetUserPermissions) istemciden iki ayrı, sıralı server action çağrısı
- * olarak yapılıyordu — ilki başarılı olup ikincisi ağ/DB hatasıyla
- * başarısız olursa hesap "user" rolünde ama permissionsConfigured=false
- * (yani "yapılandırılmamış = tüm panellere tam erişim") durumunda kalıyordu,
- * tam da kısıtlayıcı bir şablon uygulanmak istenirken en açık duruma
- * düşülüyordu. Tek transaction bu ara durumu tamamen ortadan kaldırır: ya
- * hepsi ya hiçbiri kalıcı olur. */
+ * `permissionKeys`: null ise yetkileri varsayılana sıfırlar
+ * (permissionsConfigured=false, tam erişim); dizi ise (boş dizi dahil) o
+ * anahtar setini kaydeder (permissionsConfigured=true). Rol "admin" ise
+ * yetki kaydı hiç yapılmaz (admin granüler yetkiye tabi değildir).
+ *
+ * Rol değişimi ve yetki setinin uygulanması TEK transaction içinde
+ * yapılır — rol değişip yetki yazımı ağ/DB hatasıyla başarısız olursa hesap
+ * "user" rolünde ama permissionsConfigured=false (yapılandırılmamış = tam
+ * erişim) gibi kısıtlayıcı bir şablon uygulanmak istenirken en açık duruma
+ * düşme riski, tek transaction ile tamamen ortadan kalkar: ya hepsi ya
+ * hiçbiri kalıcı olur.
+ *
+ * `firma`: sadece rol "dis"e geçiyor ve hesabın henüz firma bilgisi yoksa
+ * anlamlıdır — Yetkiler diyaloğu bu durumda bir firma alanı gösterir ve
+ * değeri buradan gönderir, aynı transaction içinde kaydedilir. */
 export async function applyRoleAssignment(
   userId: string,
-  assignment: { role: 'admin' | 'user' | 'dis' } | { presetKey: string },
+  assignment: { role: 'admin' | 'user' | 'dis'; permissionKeys: string[] | null; firma?: string },
 ): Promise<ActionResult> {
   const session = await requireAdmin();
   if (session.user.id === userId) {
@@ -273,29 +306,39 @@ export async function applyRoleAssignment(
     return { ok: false, error: 'Kullanıcı bulunamadı.' };
   }
 
-  let role: 'admin' | 'user' | 'dis';
-  // null: yetkileri varsayılana sıfırla (permissionsConfigured=false, tam
-  // erişim) — temel rol butonları için. Dizi: bu anahtar setini kaydet
-  // (permissionsConfigured=true) — bir şablon butonu için.
-  let permissionKeys: string[] | null;
-  if ('presetKey' in assignment) {
-    const preset = PERMISSION_PRESETS.find((p) => p.key === assignment.presetKey);
-    if (!preset) {
-      return { ok: false, error: 'Geçersiz yetki şablonu.' };
-    }
-    role = 'user';
-    permissionKeys = preset.permissionKeys;
-  } else {
-    role = assignment.role;
-    permissionKeys = null;
-  }
-
-  if (role === 'dis' && !existing.firma?.trim()) {
+  const { role } = assignment;
+  const nextFirma = assignment.firma?.trim() ? toUpperTr(assignment.firma.trim()) : null;
+  if (role === 'dis' && !existing.firma?.trim() && !nextFirma) {
     return {
       ok: false,
-      error:
-        'Dış kullanıcı için firma zorunludur. Bu kullanıcıyı "dış kullanıcı" olarak yeniden oluşturun ya da önce firma bilgisini ayarlayın.',
+      error: 'Dış kullanıcı için firma zorunludur.',
     };
+  }
+
+  // Admin granüler yetkiye tabi değildir; "admin" rolü seçilmişse gönderilen
+  // yetki seti ne olursa olsun yok sayılır (varsayılana sıfırlanmış sayılır).
+  // Diğer roller için gönderilen anahtarlar, o rol için geçerli kataloğun
+  // dışındaysa (ör. bir "dis" hesaba panel.* göndermek) elenir — istemci
+  // zaten sadece geçerli katalogdan checkbox sunduğu için normal şartlarda
+  // hiçbir anahtar elenmemelidir; en az biri elendiyse bu ya bir istemci
+  // hatasını ya da rolün beklenmedik şekilde değiştiğini gösterir — sessizce
+  // eksik bir set kaydetmek yerine reddedilir, admin fark etmeden hesap
+  // niyet edilenden daha az yetkiyle kalmasın.
+  const allowedKeys = new Set<string>(
+    role === 'admin' ? [] : getPermissionKeysForRole(role as 'user' | 'dis'),
+  );
+  let permissionKeys: string[] | null;
+  if (role === 'admin' || assignment.permissionKeys === null) {
+    permissionKeys = null;
+  } else {
+    permissionKeys = assignment.permissionKeys.filter((k) => allowedKeys.has(k));
+    if (permissionKeys.length !== assignment.permissionKeys.length) {
+      return {
+        ok: false,
+        error:
+          'Seçilen yetkilerden bazıları bu rol için geçerli değil. Diyaloğu kapatıp tekrar açıp deneyin.',
+      };
+    }
   }
 
   try {
@@ -305,7 +348,14 @@ export async function applyRoleAssignment(
         tx.insert(userPermission).values({ userId, permissionKey }).run();
       }
       tx.update(user)
-        .set({ role, permissionsConfigured: permissionKeys !== null })
+        .set({
+          role,
+          permissionsConfigured: permissionKeys !== null,
+          // Firma sadece "dis" rolüne geçilirken güncellenir — başka bir rol
+          // için firma göndermek (bugünkü UI hiç yapmaz, ama savunma
+          // amaçlı) sessizce yok sayılır.
+          ...(role === 'dis' && nextFirma ? { firma: nextFirma } : {}),
+        })
         .where(eq(user.id, userId))
         .run();
     });
@@ -314,10 +364,20 @@ export async function applyRoleAssignment(
   }
 
   revalidatePath('/admin/kullanicilar');
-  const summary =
-    'presetKey' in assignment
-      ? `Rol: "${existing.role}" → "user" (şablon: ${assignment.presetKey}).`
-      : `Rol: "${existing.role}" → "${role}".`;
-  await logActivity(session, 'update', 'kullanici', userId, existing.name, summary);
+  const labelByKey = new Map<string, string>(PERMISSION_CATALOG.map((p) => [p.key, p.label]));
+  const permSummary =
+    permissionKeys === null
+      ? 'yetkiler varsayılana sıfırlandı (tam erişim)'
+      : permissionKeys.length
+        ? `yetkiler: ${permissionKeys.map((k) => labelByKey.get(k) ?? k).join(', ')}`
+        : 'tüm yetkiler kaldırıldı';
+  await logActivity(
+    session,
+    'update',
+    'kullanici',
+    userId,
+    existing.name,
+    `Rol: "${existing.role}" → "${role}", ${permSummary}.`,
+  );
   return { ok: true };
 }

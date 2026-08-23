@@ -11,6 +11,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -19,8 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { applyRoleAssignment } from '@/actions/users';
+import { applyRoleAssignment, deleteUser } from '@/actions/users';
 import { PERMISSION_PRESETS } from '@/lib/permissions';
+import { useConfirm } from '@/hooks/use-confirm';
 import { UserEditDialog } from './user-edit-dialog';
 import { UserPermissionsDialog } from './user-permissions-dialog';
 
@@ -38,6 +42,7 @@ export type AdminUserRow = {
   role: 'admin' | 'user' | 'dis';
   permissionKeys: string[];
   permissionsConfigured: boolean;
+  firma: string | null;
 };
 
 /** Satırdaki Rol seçicisinde gösterilecek değeri hesaplar — "user" bir hesap
@@ -63,27 +68,103 @@ export function UserTable({
   currentUserId: string;
 }) {
   const router = useRouter();
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  // Tek bir `pendingId` yerine bir set kullanılır — aksi halde farklı
+  // satırlardaki eşzamanlı işlemler (ör. A satırında silme sürerken B
+  // satırında rol değiştirme) birbirinin "işlem sürüyor" durumunu ezip
+  // hâlâ isteği tamamlanmamış bir satırın kontrollerini erken yeniden
+  // etkinleştirebiliyordu.
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
   const [permissionsUser, setPermissionsUser] = useState<AdminUserRow | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
+  // "Dış Kullanıcı"ya geçilirken hesabın kayıtlı firması yoksa (searchPassport'un
+  // firma sınırlaması boş firmayla tamamen atlanır) doğrudan uygulamak yerine
+  // önce firma sorulur — Yetkiler diyaloğundaki aynı davranışın bu satırdaki
+  // hızlı Rol seçicisi karşılığı.
+  const [firmaPromptUser, setFirmaPromptUser] = useState<AdminUserRow | null>(null);
+  const [firmaPromptValue, setFirmaPromptValue] = useState('');
 
-  async function handleRoleChange(userId: string, value: string | null) {
+  function markPending(userId: string, pending: boolean) {
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      if (pending) next.add(userId);
+      else next.delete(userId);
+      return next;
+    });
+  }
+
+  /** Dönüş değeri, çağıranın başarıyla mı yoksa hatayla mı sonuçlandığına
+   * göre kendi ek adımını (ör. bir diyaloğu kapatmak) karar verebilmesi
+   * içindir — hata durumunda diyalog açık kalmalı ki admin firma/rolü
+   * düzeltip tekrar deneyebilsin. */
+  async function applyRole(
+    userId: string,
+    assignment: { role: 'admin' | 'user' | 'dis'; permissionKeys: string[] | null; firma?: string },
+  ): Promise<boolean> {
+    markPending(userId, true);
+    try {
+      const result = await applyRoleAssignment(userId, assignment);
+      if (!result.ok) {
+        toast.error(result.error);
+        return false;
+      }
+      toast.success('Rol güncellendi.');
+      router.refresh();
+      return true;
+    } catch {
+      toast.error('Rol güncellenemedi. Lütfen tekrar deneyin.');
+      return false;
+    } finally {
+      markPending(userId, false);
+    }
+  }
+
+  function handleRoleChange(u: AdminUserRow, value: string | null) {
     if (!value) return;
     const preset = PERMISSION_PRESETS.find((p) => p.key === value);
     if (!preset && value !== 'admin' && value !== 'user' && value !== 'dis') return;
+    const role = preset ? 'user' : (value as 'admin' | 'user' | 'dis');
+    const permissionKeys = preset ? preset.permissionKeys : null;
 
-    setPendingId(userId);
-    const result = await applyRoleAssignment(
-      userId,
-      preset ? { presetKey: preset.key } : { role: value as 'admin' | 'user' | 'dis' },
-    );
-    setPendingId(null);
-    if (!result.ok) {
-      toast.error(result.error);
+    if (role === 'dis' && !u.firma?.trim()) {
+      setFirmaPromptValue('');
+      setFirmaPromptUser(u);
       return;
     }
-    toast.success('Rol güncellendi.');
-    router.refresh();
+    applyRole(u.id, { role, permissionKeys });
+  }
+
+  async function handleFirmaPromptSave() {
+    if (!firmaPromptUser || !firmaPromptValue.trim()) return;
+    const ok = await applyRole(firmaPromptUser.id, {
+      role: 'dis',
+      permissionKeys: null,
+      firma: firmaPromptValue,
+    });
+    if (ok) setFirmaPromptUser(null);
+  }
+
+  async function handleDelete(u: AdminUserRow) {
+    const proceed = await confirm({
+      description: `"${u.name}" (${u.email}) hesabını kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+      confirmLabel: 'Sil',
+      destructive: true,
+    });
+    if (!proceed) return;
+    markPending(u.id, true);
+    try {
+      const result = await deleteUser(u.id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success('Kullanıcı silindi.');
+      router.refresh();
+    } catch {
+      toast.error('Kullanıcı silinemedi. Lütfen tekrar deneyin.');
+    } finally {
+      markPending(u.id, false);
+    }
   }
 
   return (
@@ -109,8 +190,8 @@ export function UserTable({
                 <TableCell>
                   <Select
                     value={roleSelectValue(u)}
-                    onValueChange={(v) => handleRoleChange(u.id, v)}
-                    disabled={isSelf || pendingId === u.id}
+                    onValueChange={(v) => handleRoleChange(u, v)}
+                    disabled={isSelf || pendingIds.has(u.id) || permissionsUser?.id === u.id}
                   >
                     <SelectTrigger className="w-48">
                       <SelectValue>{(v: string) => ROLE_LABELS[v] ?? v}</SelectValue>
@@ -134,6 +215,17 @@ export function UserTable({
                   {u.role !== 'admin' && (
                     <Button size="sm" variant="outline" onClick={() => setPermissionsUser(u)}>
                       Yetkiler{u.permissionKeys.length > 0 ? ` (${u.permissionKeys.length})` : ''}
+                    </Button>
+                  )}
+                  {!isSelf && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-danger text-danger hover:bg-danger/10"
+                      disabled={pendingIds.has(u.id)}
+                      onClick={() => handleDelete(u)}
+                    >
+                      Sil
                     </Button>
                   )}
                 </TableCell>
@@ -160,6 +252,49 @@ export function UserTable({
           }}
         />
       )}
+      <Dialog
+        open={firmaPromptUser !== null}
+        onOpenChange={(open) => {
+          if (!open) setFirmaPromptUser(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{firmaPromptUser?.name} — Dış Kullanıcı</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="quick-dis-firma">
+              Dış kullanıcı için firma zorunludur<span className="text-danger"> *</span>
+            </Label>
+            <Input
+              id="quick-dis-firma"
+              value={firmaPromptValue}
+              onChange={(e) => setFirmaPromptValue(e.target.value)}
+              placeholder="Örn. ABC İNŞAAT"
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              Bu hesabın sorguları sadece bu firmayla sınırlı olur.
+            </p>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button
+              size="sm"
+              disabled={
+                !firmaPromptValue.trim() ||
+                Boolean(firmaPromptUser && pendingIds.has(firmaPromptUser.id))
+              }
+              onClick={handleFirmaPromptSave}
+            >
+              Kaydet
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setFirmaPromptUser(null)}>
+              İptal
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {ConfirmDialog}
     </>
   );
 }

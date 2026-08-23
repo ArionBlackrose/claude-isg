@@ -53,6 +53,7 @@ export default async function KullanicilarPage() {
             role: u.role,
             permissionKeys: permissionsByUserId.get(u.id) ?? [],
             permissionsConfigured: u.permissionsConfigured,
+            firma: u.firma,
           }))}
           currentUserId={session.user.id}
         />
