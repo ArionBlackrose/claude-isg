@@ -7,6 +7,7 @@ const SUB_TABS = [
   { href: '/admin/aktivite', label: 'Aktivite' },
   { href: '/admin/proje', label: 'Proje Bilgileri' },
   { href: '/admin/pasaport', label: 'Eğitim Pasaportu' },
+  { href: '/admin/sifirlama', label: 'Sistem Sıfırlama' },
 ] as const;
 
 function isActive(pathname: string, href: string) {

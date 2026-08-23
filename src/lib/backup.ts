@@ -37,6 +37,16 @@ function pruneOldBackups() {
  * tetiklenmez çünkü o günün dosyası zaten diskte bulunur. */
 export async function runDailyBackupIfNeeded(): Promise<void> {
   if (hasTodaysBackup()) return;
+  await runManualBackup();
+}
+
+/** Günlük yedekten farklı olarak "bugün zaten yedek var mı" kontrolü
+ * yapmadan HER ZAMAN yeni bir yedek dosyası oluşturur — sistem sıfırlama
+ * (fabrika ayarları) gibi geri alınamaz toplu silme işlemlerinden hemen
+ * önce, o ana kadarki en güncel veriyi garanti altına almak için
+ * kullanılır. Dosya adı milisaniye damgası içerdiğinden aynı gün
+ * içinde birden çok kez çağrılması dosya çakışmasına yol açmaz. */
+export async function runManualBackup(): Promise<void> {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
   const dest = path.join(BACKUP_DIR, `app-${todayStamp()}-${Date.now()}.db`);
   await sqlite.backup(dest);

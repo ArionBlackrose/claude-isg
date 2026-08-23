@@ -11,6 +11,13 @@ export function canDeleteTraining(email: string): boolean {
   return DESTRUCTIVE_DELETE_ALLOWED_EMAILS.includes(email);
 }
 
+/** Sistem sıfırlama (fabrika ayarları) — tek işlemde onlarca/yüzlerce
+ * kaydı geri alınamaz şekilde siler, bu yüzden tek tek personel/eğitim
+ * silmekten bile daha kısıtlı olmalı; aynı güvenilir whitelist'i paylaşır. */
+export function canFactoryReset(email: string): boolean {
+  return DESTRUCTIVE_DELETE_ALLOWED_EMAILS.includes(email);
+}
+
 /** Granüler yetkilerin hangi hesap rolü için anlamlı olduğunu belirtir.
  * "dis" hesapları zaten layout seviyesinde /pasaport'a kilitlendiği için
  * (bkz. src/app/(app)/layout.tsx) sadece pasaport.* yetkileri onlar için
