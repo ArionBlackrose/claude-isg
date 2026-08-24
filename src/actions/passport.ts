@@ -3,7 +3,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
-import { requireSession } from '@/lib/session';
+import { getAccountFirma, requireExternalSession } from '@/lib/session';
 import { statusFor, type TrainingStatusCode } from '@/lib/training-status';
 import { getGrantedPermissionKeys } from '@/lib/user-permissions';
 
@@ -39,14 +39,6 @@ const MAX_RESULTS = 25;
 // kadar karakter içermeli.
 const MIN_QUERY_LENGTH = 2;
 
-async function requireExternalAccess() {
-  const session = await requireSession();
-  if (session.user.role !== 'dis' && session.user.role !== 'admin') {
-    throw new Error('Bu işlem için yetkiniz yok.');
-  }
-  return session;
-}
-
 export type PassportSearchResponse = {
   results: PassportResult[];
   /** Admin'in bu hesap için "Sonuçları Excel olarak indirebilir" yetkisini
@@ -63,7 +55,7 @@ export type PassportSearchResponse = {
  * Ayrıca T.C. Kimlik No / Görev alanları ve Excel indirme, admin'in
  * "Kullanıcılar" sayfasından bu hesaba verdiği yetkilere göre kısıtlanır. */
 export async function searchPassport(input: PassportSearchInput): Promise<PassportSearchResponse> {
-  const session = await requireExternalAccess();
+  const session = await requireExternalSession();
   const permissionKeys = await getGrantedPermissionKeys(session.user.role, session.user.id);
   const canSeeTcNo = permissionKeys.has('pasaport.tc_no_gor');
   const canSeeGorev = permissionKeys.has('pasaport.gorev_gor');
@@ -90,13 +82,7 @@ export async function searchPassport(input: PassportSearchInput): Promise<Passpo
   // bir firmanın hesabı başka bir firmanın personelinin T.C. kimlik no
   // gibi kişisel verilerini göremez. Admin bu hesaba "Tüm firmalarda
   // arama yapabilir" yetkisini verdiyse bu sınırlama uygulanmaz.
-  const accountFirma =
-    session.user.role === 'dis' &&
-    !canSearchAllFirms &&
-    'firma' in session.user &&
-    typeof session.user.firma === 'string'
-      ? session.user.firma.trim().toLocaleLowerCase('tr-TR')
-      : '';
+  const accountFirma = getAccountFirma(session, { bypass: canSearchAllFirms });
 
   const [allPersonnel, visibleTrainings, records] = await Promise.all([
     db.select().from(personnel),

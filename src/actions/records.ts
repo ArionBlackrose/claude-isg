@@ -5,8 +5,10 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { personnel, training, trainingRecord } from '@/db/schema';
 import {
+  getAccountFirma,
   hasPermission,
   requireAdmin,
+  requireExternalSession,
   requireInternalSession,
   requirePanelAccess,
 } from '@/lib/session';
@@ -18,6 +20,7 @@ import {
   getDosyaNoError,
   getGeneralCreationError,
   getGeneralSonucError,
+  getSahaEgitimiOnlyCreationError,
   getUyariOnlyCreationError,
   getUyariSonucError,
   RESTRICTED_TRAINING_CATEGORY,
@@ -114,19 +117,33 @@ export async function createRecord(input: unknown): Promise<ActionResult> {
 
 export type RecordsBatchResult = { ok: true; created: number } | { ok: false; error: string };
 
-/** `createRecords`/`createUyariRecords` arasında paylaşılan asıl toplu ekleme
- * mantığı. `mode` bu action'ın hangi kategori kuralını uygulayacağını
- * belirler — normal panelde Uyarı eğitimleri, Uyarı panelinde Uyarı DIŞI
- * eğitimler reddedilir (bkz. `src/lib/training-category-rules.ts`); böylece
- * "Uyarı eğitimi girişleri sadece Uyarı Eğitimleri panelinden yapılabilir"
- * kuralı, hangi arayüzden çağrıldığından bağımsız olarak sunucu tarafında
- * uygulanır. Seçilen bir eğitim kimliği training tablosunda bulunamazsa da
- * (silinmiş/hatalı id) kural sessizce atlanmaz, kayıt reddedilir. */
+/** `createRecords`/`createUyariRecords`/`createSahaEgitimiRecords` arasında
+ * paylaşılan asıl toplu ekleme mantığı. `mode` bu action'ın hangi kategori
+ * kuralını uygulayacağını belirler — normal panelde Uyarı/Saha Eğitimi
+ * kategorisindeki eğitimler, Uyarı panelinde Uyarı DIŞI, Saha Eğitimi
+ * panelinde Saha Eğitimi DIŞI eğitimler reddedilir (bkz.
+ * `src/lib/training-category-rules.ts`); böylece "bu kategori sadece kendi
+ * panelinden girilebilir" kuralı, hangi arayüzden çağrıldığından bağımsız
+ * olarak sunucu tarafında uygulanır. Seçilen bir eğitim kimliği training
+ * tablosunda bulunamazsa da (silinmiş/hatalı id) kural sessizce atlanmaz,
+ * kayıt reddedilir.
+ *
+ * 'saha' modu, panel bazlı iç kullanıcı yetkilendirmesi (requirePanelAccess)
+ * yerine requireExternalSession kullanır — çünkü bu panele sadece "dis"
+ * (dış kullanıcı) ve admin erişebilir, normal "user" hesapları değil.
+ * Ayrıca dış kullanıcı hesabı sadece KENDİ firmasının personeline kayıt
+ * girebilmeli: searchPassport'taki accountFirma deseni burada da
+ * uygulanır, aksi halde bir dış kullanıcı, sunucuya elle hazırlanmış bir
+ * istekle başka bir firmanın personel kimliklerini göndererek onlara kayıt
+ * ekleyebilirdi. */
 async function createRecordsInternal(
   input: unknown,
-  mode: 'general' | 'uyari',
+  mode: 'general' | 'uyari' | 'saha',
 ): Promise<RecordsBatchResult> {
-  const session = await requirePanelAccess(mode === 'uyari' ? 'panel.uyari' : 'panel.egitim_ekle');
+  const session =
+    mode === 'saha'
+      ? await requireExternalSession()
+      : await requirePanelAccess(mode === 'uyari' ? 'panel.uyari' : 'panel.egitim_ekle');
   if (mode === 'uyari' && !(await hasPermission(session, 'uyari.giris'))) {
     return { ok: false, error: 'Uyarı eğitimi girişi yapma yetkiniz yok.' };
   }
@@ -151,15 +168,29 @@ async function createRecordsInternal(
     db.select().from(personnel),
     db.select().from(training),
   ]);
+  const personRowById = new Map(personRows.map((p) => [p.id, p]));
   const personById = new Map(personRows.map((p) => [p.id, `${p.ad} ${p.soyad}`]));
   const trainingById = new Map(trainingRows.map((t) => [t.id, t]));
+
+  if (mode === 'saha' && session.user.role === 'dis') {
+    const accountFirma = getAccountFirma(session);
+    for (const personnelId of personnelIds) {
+      const p = personRowById.get(personnelId);
+      const personFirma = (p?.firma ?? '').trim().toLocaleLowerCase('tr-TR');
+      if (!accountFirma || !p || personFirma !== accountFirma) {
+        return { ok: false, error: 'Sadece kendi firmanızın personeline kayıt ekleyebilirsiniz.' };
+      }
+    }
+  }
 
   for (const trainingId of trainingIds) {
     const t = trainingById.get(trainingId);
     const error =
       mode === 'uyari'
         ? getUyariOnlyCreationError(t?.kategori)
-        : getGeneralCreationError(t?.kategori);
+        : mode === 'saha'
+          ? getSahaEgitimiOnlyCreationError(t?.kategori)
+          : getGeneralCreationError(t?.kategori);
     if (error) {
       return { ok: false, error: t ? `"${t.ad}" eğitimi: ${error}` : error };
     }
@@ -227,6 +258,13 @@ export async function createUyariRecords(input: unknown): Promise<RecordsBatchRe
   return createRecordsInternal(input, 'uyari');
 }
 
+/** Saha Eğitimi Ekle panelinden (dış kullanıcı) çağrılır — sadece
+ * kategorisi "Saha Eğitimi" olan eğitimler için, ve sadece çağıran hesabın
+ * kendi firmasının personeli için kayıt eklenmesine izin verir. */
+export async function createSahaEgitimiRecords(input: unknown): Promise<RecordsBatchResult> {
+  return createRecordsInternal(input, 'saha');
+}
+
 export async function updateRecord(id: string, input: unknown): Promise<ActionResult> {
   const session = await requireInternalSession();
   const parsed = recordUpdateSchema.safeParse(input);
@@ -242,6 +280,7 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
     .from(training)
     .where(eq(training.id, existing.trainingId));
   const isUyariRecord = existingTraining?.kategori === RESTRICTED_TRAINING_CATEGORY;
+  const isSahaRecord = existingTraining?.kategori === 'Saha Eğitimi';
   const editPermission = isUyariRecord ? 'uyari.duzenle' : 'kayit.duzenle';
   if (!(await hasPermission(session, editPermission))) {
     return {
@@ -258,7 +297,7 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
     return { ok: false, error: sonucError };
   }
   const dosyaNoError = getDosyaNoError(
-    isUyariRecord ? 'uyari' : 'general',
+    isUyariRecord ? 'uyari' : isSahaRecord ? 'saha' : 'general',
     parsed.data.sonuc,
     parsed.data.dosyaNo,
   );

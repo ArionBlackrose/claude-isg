@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-export const TRAINING_CATEGORIES = ['Genel', 'Zorunlu', 'Özel', 'Uyarı', '3. Taraf'] as const;
+export const TRAINING_CATEGORIES = [
+  'Genel',
+  'Zorunlu',
+  'Özel',
+  'Uyarı',
+  '3. Taraf',
+  'Saha Eğitimi',
+] as const;
 
 export const trainingSchema = z.object({
   ad: z.string().trim().min(1, 'Eğitim adı zorunlu.'),

@@ -52,8 +52,10 @@ export function KayitForm({
   hideQuickAdd?: boolean;
   /** "uyari" modunda Sonuç seçenekleri Katıldı/Katılmadı olur, Tarih alanı
    * "gönderildiği tarih" olarak etiketlenir ve Katıldı seçildiğinde ayrı bir
-   * "Katılım Tarihi" alanı zorunlu hale gelir. */
-  mode?: 'general' | 'uyari';
+   * "Katılım Tarihi" alanı zorunlu hale gelir. "saha" modu Sonuç/Tarih
+   * açısından "general" ile aynı davranır, sadece Dosya No zorunlu değildir
+   * (bkz. isDosyaNoRequired) — saha koşullarında hızlı kayıt girişi için. */
+  mode?: 'general' | 'uyari' | 'saha';
 }) {
   const router = useRouter();
   const [personList, setPersonList] = useState(personnel);

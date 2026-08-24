@@ -77,6 +77,39 @@ export async function requireInternalSession() {
   return session;
 }
 
+// "dis" (Eğitim Pasaportu / Saha Eğitimi dış kullanıcısı) ve "admin"
+// dışındaki hesapların erişemeyeceği action'lar için ortak kapı —
+// requireInternalSession'ın tam tersi: sadece dış kullanıcıya özel
+// panellerde (searchPassport, createSahaEgitimiRecords vb.) kullanılır.
+// redirect değil throw eder, çünkü bu action'lar sayfa render zincirinden
+// bağımsız doğrudan çağrılabilir ve çağıran taraf (client component) hatayı
+// kendi toast/hata mesajına çevirir.
+export async function requireExternalSession() {
+  const session = await requireSession();
+  if (session.user.role !== 'dis' && session.user.role !== 'admin') {
+    throw new Error('Bu işlem için yetkiniz yok.');
+  }
+  return session;
+}
+
+/** "dis" hesabına atanan firma değerini normalize edilmiş (trim + tr-TR
+ * lowercase) olarak döner — admin veya firma ataması olmayan hesaplar için
+ * boş string döner, bu da "sınırlama yok" anlamına gelir. searchPassport,
+ * createSahaEgitimiRecords ve /saha-egitimi sayfası bu tek kaynağı
+ * paylaşır; her biri ayrı ayrı aynı `.trim().toLocaleLowerCase('tr-TR')`
+ * mantığını tekrar yazmak yerine buradan çağırır — böylece normalizasyonda
+ * bir düzeltme gerekirse tek yerden yapılır. `bypass` true geçilirse (ör.
+ * admin'in "tüm firmalarda arama" yetkisi verdiği bir dış kullanıcı hesabı)
+ * sınırlama uygulanmamış gibi boş string döner. */
+export function getAccountFirma(
+  session: Awaited<ReturnType<typeof requireSession>>,
+  { bypass = false }: { bypass?: boolean } = {},
+): string {
+  if (session.user.role !== 'dis' || bypass) return '';
+  if (!('firma' in session.user) || typeof session.user.firma !== 'string') return '';
+  return session.user.firma.trim().toLocaleLowerCase('tr-TR');
+}
+
 /** requirePanelAccess ve hasPermission arasında paylaşılan asıl kontrol —
  * admin her zaman geçer; yetkileri hiç yapılandırılmamış (permissionsConfigured
  * =false) bir hesap için PERMISSION_CATALOG'daki `defaultWhenUnconfigured`
