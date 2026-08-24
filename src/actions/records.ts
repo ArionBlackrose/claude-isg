@@ -21,6 +21,7 @@ import {
   getUyariOnlyCreationError,
   getUyariSonucError,
   RESTRICTED_TRAINING_CATEGORY,
+  SAHA_EGITIMI_CATEGORY,
 } from '@/lib/training-category-rules';
 import {
   deleteCertificateIfExists,
@@ -202,17 +203,19 @@ async function createRecordsInternal(
     return { ok: false, error: 'Kayıtlar oluşturulamadı. Hiçbir kayıt eklenmedi.' };
   }
 
-  for (const row of inserted) {
-    const label = `${personById.get(row.personnelId) ?? 'bilinmeyen personel'} — ${trainingById.get(row.trainingId)?.ad ?? 'bilinmeyen eğitim'}`;
-    await logActivity(
-      session,
-      'create',
-      'kayit',
-      row.id,
-      label,
-      `Eğitim kaydı eklendi: ${tarih} — ${sonuc}.`,
-    );
-  }
+  await Promise.all(
+    inserted.map((row) => {
+      const label = `${personById.get(row.personnelId) ?? 'bilinmeyen personel'} — ${trainingById.get(row.trainingId)?.ad ?? 'bilinmeyen eğitim'}`;
+      return logActivity(
+        session,
+        'create',
+        'kayit',
+        row.id,
+        label,
+        `Eğitim kaydı eklendi: ${tarih} — ${sonuc}.`,
+      );
+    }),
+  );
 
   revalidateRecordPaths();
   return { ok: true, created: inserted.length };
@@ -247,7 +250,7 @@ export async function updateRecord(id: string, input: unknown): Promise<ActionRe
     .from(training)
     .where(eq(training.id, existing.trainingId));
   const isUyariRecord = existingTraining?.kategori === RESTRICTED_TRAINING_CATEGORY;
-  const isSahaRecord = existingTraining?.kategori === 'Saha Eğitimi';
+  const isSahaRecord = existingTraining?.kategori === SAHA_EGITIMI_CATEGORY;
   const editPermission = isUyariRecord ? 'uyari.duzenle' : 'kayit.duzenle';
   if (!(await hasPermission(session, editPermission))) {
     return {

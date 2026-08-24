@@ -7,6 +7,7 @@ import { personnel, training, trainingRecord, trainingTopic } from '@/db/schema'
 import { getAccountFirma, requireExternalSession } from '@/lib/session';
 import { logActivity } from '@/lib/audit';
 import { toUpperTR } from '@/lib/utils';
+import { getGrantedPermissionKeys } from '@/lib/user-permissions';
 import { getSahaEgitimiOnlyCreationError } from '@/lib/training-category-rules';
 import { sahaEgitimiRecordSchema } from '@/schemas/saha-egitimi';
 import type { RecordsBatchResult } from './records';
@@ -70,13 +71,19 @@ export async function createSahaEgitimiRecords(input: unknown): Promise<RecordsB
 
   // Dış kullanıcı hesabı sadece KENDİ firmasının personeline kayıt
   // girebilmeli — searchPassport'taki accountFirma deseniyle aynı (bkz.
-  // getAccountFirma); admin bu sınırlamaya tabi değildir.
+  // getAccountFirma), "pasaport.tum_firmalarda_arama" yetkisi bu paneli de
+  // aynı şekilde bypass eder (admin bu sınırlamaya zaten tabi değildir).
   if (session.user.role === 'dis') {
-    const accountFirma = getAccountFirma(session);
+    const permissionKeys = await getGrantedPermissionKeys(session.user.role, session.user.id);
+    const canSearchAllFirms = permissionKeys.has('pasaport.tum_firmalarda_arama');
+    const accountFirma = getAccountFirma(session, { bypass: canSearchAllFirms });
     for (const personnelId of personnelIds) {
       const p = personRowById.get(personnelId);
-      const personFirma = (p?.firma ?? '').trim().toLocaleLowerCase('tr-TR');
-      if (!accountFirma || !p || personFirma !== accountFirma) {
+      if (!p) {
+        return { ok: false, error: 'Sadece kendi firmanızın personeline kayıt ekleyebilirsiniz.' };
+      }
+      const personFirma = (p.firma ?? '').trim().toLocaleLowerCase('tr-TR');
+      if (accountFirma && personFirma !== accountFirma) {
         return { ok: false, error: 'Sadece kendi firmanızın personeline kayıt ekleyebilirsiniz.' };
       }
     }
@@ -106,18 +113,20 @@ export async function createSahaEgitimiRecords(input: unknown): Promise<RecordsB
     return { ok: false, error: 'Kayıtlar oluşturulamadı. Hiçbir kayıt eklenmedi.' };
   }
 
-  for (const row of inserted) {
-    const p = personRowById.get(row.personnelId);
-    const label = `${p ? `${p.ad} ${p.soyad}` : 'bilinmeyen personel'} — ${selectedTraining.ad}`;
-    await logActivity(
-      session,
-      'create',
-      'kayit',
-      row.id,
-      label,
-      `Saha eğitimi kaydı eklendi: ${tarih} — ${topic}.`,
-    );
-  }
+  await Promise.all(
+    inserted.map((row) => {
+      const p = personRowById.get(row.personnelId);
+      const label = `${p ? `${p.ad} ${p.soyad}` : 'bilinmeyen personel'} — ${selectedTraining.ad}`;
+      return logActivity(
+        session,
+        'create',
+        'kayit',
+        row.id,
+        label,
+        `Saha eğitimi kaydı eklendi: ${tarih} — ${topic}.`,
+      );
+    }),
+  );
 
   revalidateSahaPaths();
   return { ok: true, created: inserted.length };

@@ -4,6 +4,7 @@ import { personnel, training, trainingRecord, trainingTopic } from '@/db/schema'
 import { eq } from 'drizzle-orm';
 import { canDeleteTraining, requirePanelAccess } from '@/lib/session';
 import { statusFor } from '@/lib/training-status';
+import { SAHA_EGITIMI_CATEGORY } from '@/lib/training-category-rules';
 import { KatalogForm } from '@/components/katalog/katalog-form';
 import { KatalogTable, type KatalogRow } from '@/components/katalog/katalog-table';
 import { SahaBaslikManager } from '@/components/katalog/saha-baslik-manager';
@@ -42,14 +43,15 @@ export default async function KatalogPage() {
 
   const isAdmin = session.user.role === 'admin';
   const canDelete = isAdmin && canDeleteTraining(session.user.email);
-  const sahaTrainingRows = trainings.filter((t) => t.kategori === 'Saha Eğitimi');
+  const rowById = new Map(rows.map((r) => [r.id, r]));
+  const sahaTrainingRows = trainings.filter((t) => t.kategori === SAHA_EGITIMI_CATEGORY);
   const sahaTrainings = sahaTrainingRows.map((t) => ({
     id: t.id,
     ad: t.ad,
     kategori: t.kategori,
     egitimSuresi: t.egitimSuresi,
     digerSecenegiVar: t.digerSecenegiVar,
-    recordCount: records.filter((r) => r.trainingId === t.id).length,
+    recordCount: rowById.get(t.id)?.recordCount ?? 0,
   }));
 
   return (
