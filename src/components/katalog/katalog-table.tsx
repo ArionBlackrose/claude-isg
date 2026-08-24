@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { deleteTraining, updateTraining } from '@/actions/training';
+import { toUpperTR } from '@/lib/utils';
 import { TRAINING_CATEGORIES, type TrainingInput } from '@/schemas/training';
 import { useConfirm } from '@/hooks/use-confirm';
 import { usePagination } from '@/hooks/use-pagination';
@@ -139,12 +140,10 @@ export function KatalogTable({
   const { confirm, ConfirmDialog } = useConfirm();
 
   const filteredRows = useMemo(() => {
-    const q = search.trim().toLocaleLowerCase('tr-TR');
+    const q = toUpperTR(search);
     if (!q) return rows;
     return rows.filter(
-      (row) =>
-        row.ad.toLocaleLowerCase('tr-TR').includes(q) ||
-        row.kategori.toLocaleLowerCase('tr-TR').includes(q),
+      (row) => toUpperTR(row.ad).includes(q) || toUpperTR(row.kategori).includes(q),
     );
   }, [rows, search]);
 

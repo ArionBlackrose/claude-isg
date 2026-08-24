@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, toUpperTR } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -148,11 +148,11 @@ export function RaporView({
     [egitimOptions],
   );
 
-  const q = search.trim().toLocaleLowerCase('tr-TR');
+  const q = toUpperTR(search);
 
   const filteredPeople = useMemo(() => {
     if (!q) return personnel;
-    return personnel.filter((p) => `${p.ad} ${p.soyad}`.toLocaleLowerCase('tr-TR').includes(q));
+    return personnel.filter((p) => toUpperTR(`${p.ad} ${p.soyad}`).includes(q));
   }, [personnel, q]);
 
   const guncelPersonelList = useMemo(
@@ -171,7 +171,7 @@ export function RaporView({
   }, [records]);
   const egitimTuruList = useMemo(() => {
     if (!q) return trainings;
-    return trainings.filter((t) => t.ad.toLocaleLowerCase('tr-TR').includes(q));
+    return trainings.filter((t) => toUpperTR(t.ad).includes(q));
   }, [trainings, q]);
 
   const personelMap = useMemo(() => new Map(personnel.map((p) => [p.id, p])), [personnel]);
@@ -187,10 +187,7 @@ export function RaporView({
         if (!q) return true;
         const name = p ? `${p.ad} ${p.soyad}` : '';
         const egitim = t ? t.ad : '';
-        return (
-          name.toLocaleLowerCase('tr-TR').includes(q) ||
-          egitim.toLocaleLowerCase('tr-TR').includes(q)
-        );
+        return toUpperTR(name).includes(q) || toUpperTR(egitim).includes(q);
       });
     return rows.sort((a, b) => b.r.tarih.localeCompare(a.r.tarih));
   }, [records, personelMap, trainingMap, q]);

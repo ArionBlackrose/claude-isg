@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
+import { toUpperTR } from '@/lib/utils';
 import { isDosyaNoRequired } from '@/lib/training-category-rules';
 import { deleteRecord, updateRecord } from '@/actions/records';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -83,9 +84,9 @@ export function UyariRecordsTable({
   const [tarihEnd, setTarihEnd] = useState('');
 
   const filteredRecords = useMemo(() => {
-    const q = search.trim().toLocaleUpperCase('tr-TR');
+    const q = toUpperTR(search);
     return records.filter((r) => {
-      if (q && !`${r.personelAdi} ${r.egitimAdi}`.toLocaleUpperCase('tr-TR').includes(q)) {
+      if (q && !toUpperTR(`${r.personelAdi} ${r.egitimAdi}`).includes(q)) {
         return false;
       }
       if (sonucFilter !== 'all' && r.sonuc !== sonucFilter) return false;

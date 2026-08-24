@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { createRecords, type RecordsBatchResult } from '@/actions/records';
 import { todayStr } from '@/lib/training-status';
+import { toUpperTR } from '@/lib/utils';
 import { isDosyaNoRequired } from '@/lib/training-category-rules';
 import { PersonnelMultiSelect } from './personnel-multi-select';
 import { QuickAddPersonnel } from './quick-add-personnel';
@@ -78,9 +79,9 @@ export function KayitForm({
   const dosyaNoRequired = isDosyaNoRequired(mode, sonuc);
 
   const filteredTrainings = useMemo(() => {
-    const q = trainingSearch.trim().toLocaleUpperCase('tr-TR');
+    const q = toUpperTR(trainingSearch);
     if (!q) return trainingList;
-    return trainingList.filter((t) => t.ad.toLocaleUpperCase('tr-TR').includes(q));
+    return trainingList.filter((t) => toUpperTR(t.ad).includes(q));
   }, [trainingList, trainingSearch]);
 
   function togglePersonel(id: string) {

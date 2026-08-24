@@ -23,6 +23,7 @@ import {
 import { deletePersonnel } from '@/actions/personnel';
 import { fmtDate } from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
+import { toUpperTR } from '@/lib/utils';
 import { PersonelEditDialog } from './personel-edit-dialog';
 import { PersonelDetayDialog } from './personel-detay-dialog';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -119,15 +120,10 @@ export function PersonelTable({
   }
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLocaleLowerCase('tr-TR');
+    const q = toUpperTR(search);
     return rows.filter((p) => {
       if (durumFilter !== 'all' && p.durum !== durumFilter) return false;
-      if (
-        q &&
-        !`${p.ad} ${p.soyad} ${p.firma ?? ''} ${p.tcNo ?? ''}`
-          .toLocaleLowerCase('tr-TR')
-          .includes(q)
-      )
+      if (q && !toUpperTR(`${p.ad} ${p.soyad} ${p.firma ?? ''} ${p.tcNo ?? ''}`).includes(q))
         return false;
       return true;
     });

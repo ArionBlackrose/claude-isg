@@ -58,14 +58,11 @@ export function SahaBaslikManager({
 
   const trainingById = useMemo(() => new Map(trainings.map((t) => [t.id, t])), [trainings]);
   const filteredTopics = useMemo(() => {
-    const q = search.trim().toLocaleLowerCase('tr-TR');
+    const q = toUpperTR(search);
     if (!q) return topics;
     return topics.filter((t) => {
       const trainingAd = trainingById.get(t.trainingId)?.ad ?? '';
-      return (
-        t.baslik.toLocaleLowerCase('tr-TR').includes(q) ||
-        trainingAd.toLocaleLowerCase('tr-TR').includes(q)
-      );
+      return toUpperTR(t.baslik).includes(q) || toUpperTR(trainingAd).includes(q);
     });
   }, [topics, trainingById, search]);
   const { page, setPage, pageSize, totalPages, changePageSize, withPageReset } = usePagination(

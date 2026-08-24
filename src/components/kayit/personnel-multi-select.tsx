@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toUpperTR } from '@/lib/utils';
 
 type PersonelOption = {
   id: string;
@@ -29,11 +30,9 @@ export function PersonnelMultiSelect({
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLocaleUpperCase('tr-TR');
+    const q = toUpperTR(search);
     if (!q) return personnel;
-    return personnel.filter((p) =>
-      `${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleUpperCase('tr-TR').includes(q),
-    );
+    return personnel.filter((p) => toUpperTR(`${p.ad} ${p.soyad} ${p.tcNo ?? ''}`).includes(q));
   }, [personnel, search]);
 
   return (

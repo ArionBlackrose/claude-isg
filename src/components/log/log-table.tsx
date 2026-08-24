@@ -29,6 +29,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { addMonths, daysBetween, todayStr, fmtDate, tagClassFor } from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
+import { toUpperTR } from '@/lib/utils';
 import { TRAINING_CATEGORIES } from '@/schemas/training';
 import { KayitEditDialog } from './kayit-edit-dialog';
 import { usePagination } from '@/hooks/use-pagination';
@@ -181,13 +182,12 @@ export function LogTable({
   );
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLocaleLowerCase('tr-TR');
+    const q = toUpperTR(search);
     return personnel.filter((p) => {
       if (durumFilter !== 'all' && p.durum !== durumFilter) return false;
       if (firmaFilter !== 'all' && p.firma !== firmaFilter) return false;
       if (calismaSekliFilter !== 'all' && p.calismaSekli !== calismaSekliFilter) return false;
-      if (q && !`${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleLowerCase('tr-TR').includes(q))
-        return false;
+      if (q && !toUpperTR(`${p.ad} ${p.soyad} ${p.tcNo ?? ''}`).includes(q)) return false;
       // Eğitim durumu açıkça seçilmişse o duruma tam eşleşme aranır (ör.
       // "Almadı" seçilirse eğitimi almayanlar listelenir). Durum seçilmemiş
       // ama bir kategori/eğitim seçilmişse, varsayılan olarak sadece o
