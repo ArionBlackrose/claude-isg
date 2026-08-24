@@ -45,6 +45,10 @@ export function QuickAddTraining({
       kategori,
       gecerlilikAy: Number(gecerlilikAy) || 0,
       egitimSuresi: Number(egitimSuresi) || 0,
+      // Bu hızlı ekleme formu Saha Eğitimi kategorisini hiç sunmuyor
+      // (kategoriOptions genel akışlardan geldiği için zaten hariç
+      // tutuluyor/reddediliyor) — "Diğer" seçeneği bu yüzden hep false.
+      digerSecenegiVar: false,
     });
     setIsSubmitting(false);
     if (!result.ok) {

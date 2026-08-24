@@ -17,7 +17,13 @@ import {
 import { createTraining } from '@/actions/training';
 import { trainingSchema, TRAINING_CATEGORIES, type TrainingInput } from '@/schemas/training';
 
-const DEFAULTS: TrainingInput = { ad: '', kategori: 'Genel', gecerlilikAy: 0, egitimSuresi: 0 };
+const DEFAULTS: TrainingInput = {
+  ad: '',
+  kategori: 'Genel',
+  gecerlilikAy: 0,
+  egitimSuresi: 0,
+  digerSecenegiVar: false,
+};
 
 export function KatalogForm() {
   const router = useRouter();
@@ -88,10 +94,25 @@ export function KatalogForm() {
           id="egitimSuresi"
           type="number"
           min={0}
+          step={0.25}
           placeholder="0 = belirtilmedi"
           {...register('egitimSuresi', { valueAsNumber: true })}
         />
       </div>
+      {watch('kategori') === 'Saha Eğitimi' && (
+        <div className="space-y-1.5">
+          <Label htmlFor="digerSecenegiVar" className="flex cursor-pointer items-center gap-2">
+            <input
+              id="digerSecenegiVar"
+              type="checkbox"
+              className="accent-primary"
+              checked={watch('digerSecenegiVar') ?? false}
+              onChange={(e) => setValue('digerSecenegiVar', e.target.checked)}
+            />
+            &quot;Diğer&quot; (serbest metin) seçeneği olsun
+          </Label>
+        </div>
+      )}
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Ekleniyor...' : 'Eğitimi Ekle'}
       </Button>

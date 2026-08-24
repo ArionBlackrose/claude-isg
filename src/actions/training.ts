@@ -53,6 +53,7 @@ export async function updateTraining(id: string, input: unknown): Promise<Action
     kategori: 'Kategori',
     gecerlilikAy: 'Geçerlilik (ay)',
     egitimSuresi: 'Süre (saat)',
+    digerSecenegiVar: 'Diğer Seçeneği',
   });
   await logActivity(session, 'update', 'egitim', id, parsed.data.ad, summary);
   return { ok: true };

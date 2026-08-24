@@ -16,6 +16,7 @@ import {
 import { createRecords, type RecordsBatchResult } from '@/actions/records';
 import { todayStr } from '@/lib/training-status';
 import { isDosyaNoRequired } from '@/lib/training-category-rules';
+import { PersonnelMultiSelect } from './personnel-multi-select';
 import { QuickAddPersonnel } from './quick-add-personnel';
 import { QuickAddTraining } from './quick-add-training';
 
@@ -52,16 +53,13 @@ export function KayitForm({
   hideQuickAdd?: boolean;
   /** "uyari" modunda Sonuç seçenekleri Katıldı/Katılmadı olur, Tarih alanı
    * "gönderildiği tarih" olarak etiketlenir ve Katıldı seçildiğinde ayrı bir
-   * "Katılım Tarihi" alanı zorunlu hale gelir. "saha" modu Sonuç/Tarih
-   * açısından "general" ile aynı davranır, sadece Dosya No zorunlu değildir
-   * (bkz. isDosyaNoRequired) — saha koşullarında hızlı kayıt girişi için. */
-  mode?: 'general' | 'uyari' | 'saha';
+   * "Katılım Tarihi" alanı zorunlu hale gelir. */
+  mode?: 'general' | 'uyari';
 }) {
   const router = useRouter();
   const [personList, setPersonList] = useState(personnel);
   const [trainingList, setTrainingList] = useState(trainings);
 
-  const [personSearch, setPersonSearch] = useState('');
   const [trainingSearch, setTrainingSearch] = useState('');
   const [personnelIds, setPersonnelIds] = useState<Set<string>>(new Set());
   const [trainingIds, setTrainingIds] = useState<Set<string>>(new Set());
@@ -78,14 +76,6 @@ export function KayitForm({
   const [showAddEgitim, setShowAddEgitim] = useState(false);
 
   const dosyaNoRequired = isDosyaNoRequired(mode, sonuc);
-
-  const filteredPersonel = useMemo(() => {
-    const q = personSearch.trim().toLocaleUpperCase('tr-TR');
-    if (!q) return personList;
-    return personList.filter((p) =>
-      `${p.ad} ${p.soyad} ${p.tcNo ?? ''}`.toLocaleUpperCase('tr-TR').includes(q),
-    );
-  }, [personList, personSearch]);
 
   const filteredTrainings = useMemo(() => {
     const q = trainingSearch.trim().toLocaleUpperCase('tr-TR');
@@ -150,38 +140,12 @@ export function KayitForm({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label>Personel {personnelIds.size > 0 && `(${personnelIds.size} seçili)`}</Label>
-          </div>
-          <Input
-            value={personSearch}
-            onChange={(e) => setPersonSearch(e.target.value)}
-            placeholder="Ad, soyad veya TC ile arayın..."
-          />
-          <div className="max-h-52 space-y-0.5 overflow-auto rounded-md border border-border bg-panel-2 p-1.5">
-            {filteredPersonel.length === 0 && (
-              <p className="px-2 py-1.5 text-sm text-muted-foreground">Sonuç bulunamadı</p>
-            )}
-            {filteredPersonel.map((p) => (
-              <label
-                key={p.id}
-                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-panel"
-              >
-                <input
-                  type="checkbox"
-                  checked={personnelIds.has(p.id)}
-                  onChange={() => togglePersonel(p.id)}
-                  className="accent-primary"
-                />
-                <span>
-                  {p.ad} {p.soyad}
-                  {p.firma ? ` — ${p.firma}` : ''}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
+        <PersonnelMultiSelect
+          personnel={personList}
+          selectedIds={personnelIds}
+          onToggle={togglePersonel}
+          searchPlaceholder="Ad, soyad veya TC ile arayın..."
+        />
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label>Eğitim {trainingIds.size > 0 && `(${trainingIds.size} seçili)`}</Label>

@@ -1,5 +1,13 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index, check, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  sqliteTable,
+  text,
+  integer,
+  real,
+  index,
+  check,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 import { user } from './auth-schema';
 
 export * from './auth-schema';
@@ -54,12 +62,40 @@ export const training = sqliteTable('training', {
     .notNull()
     .default('Genel'),
   gecerlilikAy: integer('gecerlilik_ay').notNull().default(0),
-  egitimSuresi: integer('egitim_suresi').notNull().default(0),
+  // Saatte kesirli değerler (ör. 0.25 = 15 dk, 0.5 = 30 dk) desteklemek için
+  // real — Saha Eğitimi türlerinin (TRIC Kart, İTA, Toolbox) kısa süreli
+  // olması nedeniyle eklendi; adam-saat hesaplaması (src/lib/adam-saat.ts)
+  // bu alanı tamsayı/ondalık ayrımı yapmadan doğrudan çarpan olarak kullanır.
+  egitimSuresi: real('egitim_suresi').notNull().default(0),
   pasaportGoster: integer('pasaport_goster', { mode: 'boolean' }).notNull().default(false),
+  // Sadece "Saha Eğitimi" kategorisindeki eğitimler için anlamlı: true ise
+  // dış kullanıcı, admin'in tanımladığı başlık kataloğu dışında "Diğer"
+  // seçip serbest metinle konu girebilir (bkz. trainingTopic ve
+  // src/actions/saha-egitimi.ts). Diğer kategorilerde kullanılmaz.
+  digerSecenegiVar: integer('diger_secenegi_var', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+/** Bir "Saha Eğitimi" türü (ör. Bülten, Toolbox) için admin'in önceden
+ * tanımladığı konu başlıkları — dış kullanıcı kayıt eklerken serbest metin
+ * yazmak yerine buradan seçim yapar (training.digerSecenegiVar=true olan
+ * türlerde ayrıca "Diğer" seçeneğiyle serbest metne de izin verilir). */
+export const trainingTopic = sqliteTable(
+  'training_topic',
+  {
+    id: id(),
+    trainingId: text('training_id')
+      .notNull()
+      .references(() => training.id, { onDelete: 'cascade' }),
+    baslik: text('baslik').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [index('training_topic_training_id_idx').on(table.trainingId)],
+);
 
 export const auditLog = sqliteTable(
   'audit_log',

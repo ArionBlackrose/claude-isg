@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import { desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
-import { personnel, training, trainingRecord } from '@/db/schema';
+import { personnel, training, trainingRecord, trainingTopic } from '@/db/schema';
 import { getAccountFirma, requireExternalSession } from '@/lib/session';
-import { KayitForm } from '@/components/kayit/kayit-form';
-import { createSahaEgitimiRecords } from '@/actions/records';
+import { SahaEgitimiForm } from '@/components/kayit/saha-egitimi-form';
 import { fmtDate } from '@/lib/training-status';
 
 export const metadata: Metadata = { title: 'Saha Eğitimi Ekle' };
@@ -18,12 +17,13 @@ export default async function SahaEgitimiPage() {
   const accountFirma = getAccountFirma(session);
 
   // sahaTrainings ve allPersonnel birbirinden bağımsız sorgular — ayrı ayrı
-  // await'lemek yerine paralel çalıştırılır. sahaRecords ise sahaTrainingIds'e
-  // bağımlı olduğundan bu ikisinin sonucunu bekler. Firma karşılaştırması
-  // SQL seviyesine taşınmadı: `personel.firma` orijinal harf büyüklüğüyle
-  // saklanıyor, SQLite'ın LOWER()'ı ise tr-TR'ye özgü İ/I ayrımını
-  // (JS'teki toLocaleLowerCase('tr-TR') gibi) doğru uygulamaz — bu yüzden
-  // normalize edilmiş karşılaştırma burada, uygulama tarafında yapılıyor.
+  // await'lemek yerine paralel çalıştırılır. sahaRecords/sahaTopics ise
+  // sahaTrainingIds'e bağımlı olduğundan bu ikisinin sonucunu bekler. Firma
+  // karşılaştırması SQL seviyesine taşınmadı: `personel.firma` orijinal
+  // harf büyüklüğüyle saklanıyor, SQLite'ın LOWER()'ı ise tr-TR'ye özgü İ/I
+  // ayrımını (JS'teki toLocaleLowerCase('tr-TR') gibi) doğru uygulamaz — bu
+  // yüzden normalize edilmiş karşılaştırma burada, uygulama tarafında
+  // yapılıyor.
   const [sahaTrainings, allPersonnel] = await Promise.all([
     db.select().from(training).where(eq(training.kategori, 'Saha Eğitimi')).orderBy(training.ad),
     db.select().from(personnel),
@@ -39,13 +39,16 @@ export default async function SahaEgitimiPage() {
   });
   const scopedPersonnelIds = new Set(scopedPersonnel.map((p) => p.id));
 
-  const sahaRecords = sahaTrainingIds.length
-    ? await db
-        .select()
-        .from(trainingRecord)
-        .where(inArray(trainingRecord.trainingId, sahaTrainingIds))
-        .orderBy(desc(trainingRecord.tarih), desc(trainingRecord.createdAt))
-    : [];
+  const [sahaRecords, sahaTopics] = sahaTrainingIds.length
+    ? await Promise.all([
+        db
+          .select()
+          .from(trainingRecord)
+          .where(inArray(trainingRecord.trainingId, sahaTrainingIds))
+          .orderBy(desc(trainingRecord.tarih), desc(trainingRecord.createdAt)),
+        db.select().from(trainingTopic).where(inArray(trainingTopic.trainingId, sahaTrainingIds)),
+      ])
+    : [[], []];
   const scopedRecords = sahaRecords.filter((r) => scopedPersonnelIds.has(r.personnelId));
 
   const trainingMap = new Map(sahaTrainings.map((t) => [t.id, t]));
@@ -61,33 +64,36 @@ export default async function SahaEgitimiPage() {
           Saha Eğitimi Ekle
         </h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          TRIC Kart, İTA, Toolbox, Bülten, OJT gibi saha eğitimlerini burada girin. Konuyu Not
-          alanına yazıp eğitimi verdiğiniz personeli seçin — kayıt, personelin eğitim geçmişine
-          işlenir.
+          Eğitim türünü seçin, admin&apos;in tanımladığı başlıklardan birini işaretleyip eğitimi
+          verdiğiniz personeli seçin — kayıt, personelin eğitim geçmişine işlenir.
         </p>
         {!sahaTrainings.length ? (
           <div className="p-8 text-center text-muted-foreground">
             Henüz Saha Eğitimi kategorisinde bir eğitim türü yok — önce admin&apos;in Eğitim
-            Kataloğu&apos;na kategorisi &quot;Saha Eğitimi&quot; olan bir eğitim (TRIC Kart, İTA,
-            Toolbox, Bülten, OJT vb.) eklemesi gerekiyor.
+            Kataloğu&apos;na kategorisi &quot;Saha Eğitimi&quot; olan bir eğitim eklemesi gerekiyor.
           </div>
         ) : !scopedPersonnel.length ? (
           <div className="p-8 text-center text-muted-foreground">
             Firmanıza kayıtlı güncel personel bulunamadı.
           </div>
         ) : (
-          <KayitForm
+          <SahaEgitimiForm
             personnel={scopedPersonnel.map((p) => ({
               id: p.id,
               ad: p.ad,
               soyad: p.soyad,
-              tcNo: p.tcNo,
               firma: p.firma,
             }))}
-            trainings={sahaTrainings.map((t) => ({ id: t.id, ad: t.ad }))}
-            submitAction={createSahaEgitimiRecords}
-            hideQuickAdd
-            mode="saha"
+            trainings={sahaTrainings.map((t) => ({
+              id: t.id,
+              ad: t.ad,
+              digerSecenegiVar: t.digerSecenegiVar,
+            }))}
+            topics={sahaTopics.map((t) => ({
+              id: t.id,
+              trainingId: t.trainingId,
+              baslik: t.baslik,
+            }))}
           />
         )}
       </div>
@@ -106,7 +112,7 @@ export default async function SahaEgitimiPage() {
                   <th className="py-2 pr-3">Personel</th>
                   <th className="py-2 pr-3">Eğitim</th>
                   <th className="py-2 pr-3">Tarih</th>
-                  <th className="py-2 pr-3">Not</th>
+                  <th className="py-2 pr-3">Konu</th>
                 </tr>
               </thead>
               <tbody>

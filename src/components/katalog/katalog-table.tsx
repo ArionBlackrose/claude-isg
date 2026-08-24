@@ -33,6 +33,7 @@ export type KatalogRow = {
   kategori: string;
   gecerlilikAy: number;
   egitimSuresi: number;
+  digerSecenegiVar: boolean;
   recordCount: number;
   expiredCount: number;
   soonCount: number;
@@ -43,6 +44,7 @@ type KatalogDraft = {
   kategori: TrainingInput['kategori'];
   gecerlilikAy: string;
   egitimSuresi: string;
+  digerSecenegiVar: boolean;
 };
 
 /** Katalog satırı düzenleme alanlarının tek kaynağı — hem mobil kart hem
@@ -93,11 +95,24 @@ function buildKatalogDraftFields(
       <Input
         type="number"
         min={0}
+        step={0.25}
         className={numberInputClassName}
         value={draft.egitimSuresi}
         onChange={(e) => setDraft((d) => ({ ...d, egitimSuresi: e.target.value }))}
       />
     ),
+    digerField:
+      draft.kategori === 'Saha Eğitimi' ? (
+        <label className="flex cursor-pointer items-center gap-2 text-sm whitespace-nowrap">
+          <input
+            type="checkbox"
+            className="accent-primary"
+            checked={draft.digerSecenegiVar}
+            onChange={(e) => setDraft((d) => ({ ...d, digerSecenegiVar: e.target.checked }))}
+          />
+          &quot;Diğer&quot; seçeneği
+        </label>
+      ) : null,
   };
 }
 
@@ -112,16 +127,12 @@ export function KatalogTable({
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{
-    ad: string;
-    kategori: TrainingInput['kategori'];
-    gecerlilikAy: string;
-    egitimSuresi: string;
-  }>({
+  const [draft, setDraft] = useState<KatalogDraft>({
     ad: '',
     kategori: 'Genel',
     gecerlilikAy: '0',
     egitimSuresi: '0',
+    digerSecenegiVar: false,
   });
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -159,6 +170,7 @@ export function KatalogTable({
         : 'Genel',
       gecerlilikAy: String(row.gecerlilikAy),
       egitimSuresi: String(row.egitimSuresi),
+      digerSecenegiVar: row.digerSecenegiVar,
     });
   }
 
@@ -169,6 +181,7 @@ export function KatalogTable({
       kategori: draft.kategori,
       gecerlilikAy: Number(draft.gecerlilikAy) || 0,
       egitimSuresi: Number(draft.egitimSuresi) || 0,
+      digerSecenegiVar: draft.kategori === 'Saha Eğitimi' ? draft.digerSecenegiVar : false,
     });
     setPendingId(null);
     if (!result.ok) {
@@ -240,6 +253,7 @@ export function KatalogTable({
                         {mobileDraftFields.suresiField}
                       </div>
                     </div>
+                    {mobileDraftFields.digerField}
                     <div className="flex gap-2">
                       <Button size="sm" disabled={isPending} onClick={() => saveEdit(row.id)}>
                         Kaydet
@@ -344,6 +358,7 @@ export function KatalogTable({
                       </TableCell>
                       <TableCell className="text-muted-foreground">-</TableCell>
                       <TableCell className="space-x-2 whitespace-nowrap">
+                        {desktopDraftFields.digerField}
                         <Button size="sm" disabled={isPending} onClick={() => saveEdit(row.id)}>
                           Kaydet
                         </Button>
