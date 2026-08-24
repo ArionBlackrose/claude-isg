@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
-
-const toUpperTr = (v: string) => v.toLocaleUpperCase('tr-TR');
+import { toUpperTR as toUpperTr } from '@/lib/utils';
 
 const tcNoField = z
   .string()

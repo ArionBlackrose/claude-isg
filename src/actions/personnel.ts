@@ -9,6 +9,7 @@ import { normName, splitName } from '@/lib/excel';
 import { todayStr } from '@/lib/training-status';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
 import { logActivity, diffSummary } from '@/lib/audit';
+import { toUpperTR as toUpperTr } from '@/lib/utils';
 import {
   deleteCertificateIfExists,
   DriveNotConfiguredError,
@@ -371,8 +372,6 @@ export type PersonnelSyncResult =
       skipped: number;
     }
   | { ok: false; error: string };
-
-const toUpperTr = (v: string) => v.toLocaleUpperCase('tr-TR');
 
 export async function syncPersonnelFromExcel(
   rows: PersonnelExcelRawRow[],

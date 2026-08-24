@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { user, userPermission } from '@/db/schema';
 import { requireAdmin } from '@/lib/session';
 import { logActivity, diffSummary } from '@/lib/audit';
+import { toUpperTR as toUpperTr } from '@/lib/utils';
 import { createUserSchema, updateUserSchema } from '@/schemas/user';
 import { getPermissionKeysForRole, PERMISSION_CATALOG } from '@/lib/permissions';
 import type { ActionResult, CreateResult } from './training';
@@ -84,8 +85,6 @@ export async function updateUser(userId: string, input: unknown): Promise<Action
   await logActivity(session, 'update', 'kullanici', userId, parsed.data.name, summary);
   return { ok: true };
 }
-
-const toUpperTr = (v: string) => v.toLocaleUpperCase('tr-TR');
 
 /** Dış kullanıcı (Eğitim Pasaportu) hesabının firma alanını günceller.
  * searchPassport artık firma karşılaştırmasını tam eşleşmeyle yapıyor,

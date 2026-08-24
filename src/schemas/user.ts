@@ -1,6 +1,5 @@
 import { z } from 'zod';
-
-const toUpperTr = (v: string) => v.toLocaleUpperCase('tr-TR');
+import { toUpperTR as toUpperTr } from '@/lib/utils';
 
 export const createUserSchema = z.object({
   name: z
