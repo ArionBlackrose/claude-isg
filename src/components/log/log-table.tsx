@@ -18,7 +18,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { statusFor, type TrainingStatusCode } from '@/lib/training-status';
+import { StatusTag } from '@/components/ui/status-tag';
+import { AnimatePresence, motion } from 'motion/react';
+import { statusFor, fmtDate, toneForDurum, toneForTrainingStatus } from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
 import { KayitEditDialog } from './kayit-edit-dialog';
 
@@ -60,19 +62,6 @@ const EGITIM_DURUM_LABELS = Object.fromEntries(EGITIM_DURUM_OPTIONS.map((o) => [
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
-function fmtDate(d: string) {
-  const [y, m, day] = d.split('-');
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
-}
-
-function tagClassFor(code: TrainingStatusCode) {
-  if (code === 'expired') return 'tag-bad';
-  if (code === 'soon') return 'tag-warn';
-  if (code === 'valid') return 'tag-ok';
-  return 'tag-none';
-}
-
 export function LogTable({
   personnel,
   trainings,
@@ -109,6 +98,24 @@ export function LogTable({
     [egitimOptions],
   );
 
+  // records dizisini personel+eğitim çiftine göre önceden grupluyoruz —
+  // statusFor'un her hücre için tüm records dizisini filtreleyip sıralaması yerine
+  // O(1) lookup ile önceden hazırlanmış, zaten en güncele göre sıralı bir liste kullanır.
+  const recordsByPersonTraining = useMemo(() => {
+    const map = new Map<string, LogRecord[]>();
+    for (const r of records) {
+      const key = `${r.personnelId}:${r.trainingId}`;
+      const list = map.get(key);
+      if (list) list.push(r);
+      else map.set(key, [r]);
+    }
+    return map;
+  }, [records]);
+
+  function recordsFor(personnelId: string, trainingId: string): LogRecord[] {
+    return recordsByPersonTraining.get(`${personnelId}:${trainingId}`) ?? [];
+  }
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return personnel.filter((p) => {
@@ -119,9 +126,10 @@ export function LogTable({
       if (egitimDurumFilter !== 'all') {
         const egitimler =
           egitimFilter === 'all' ? trainings : trainings.filter((t) => t.id === egitimFilter);
-        const matches = egitimler.some(
-          (t) => statusFor(p.id, t.id, records, t).code === egitimDurumFilter,
-        );
+        const matches = egitimler.some((t) => {
+          const recs = recordsByPersonTraining.get(`${p.id}:${t.id}`) ?? [];
+          return statusFor(p.id, t.id, recs, t).code === egitimDurumFilter;
+        });
         if (!matches) return false;
       }
       return true;
@@ -135,7 +143,7 @@ export function LogTable({
     egitimFilter,
     egitimDurumFilter,
     trainings,
-    records,
+    recordsByPersonTraining,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -185,7 +193,7 @@ export function LogTable({
         p.durum,
       ];
       const cols = trainings.map((t) => {
-        const s = statusFor(p.id, t.id, records, t);
+        const s = statusFor(p.id, t.id, recordsFor(p.id, t.id), t);
         return s.tarih && s.code === 'valid' ? fmtDate(s.label) : s.label;
       });
       aoa.push([...base, ...cols]);
@@ -285,64 +293,80 @@ export function LogTable({
         <div className="p-10 text-center text-muted-foreground">Kayıt bulunamadı.</div>
       ) : (
         <>
-          <div className="max-h-[560px] overflow-auto rounded-lg border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No</TableHead>
-                  <TableHead>TC Kimlik No</TableHead>
-                  <TableHead>Adı Soyadı</TableHead>
-                  <TableHead>Görevi</TableHead>
-                  <TableHead>Firması</TableHead>
-                  <TableHead>Çalışma Şekli</TableHead>
-                  <TableHead>Çalışma Durumu</TableHead>
-                  {trainings.map((t) => (
-                    <TableHead key={t.id}>{t.ad}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paged.map((p, i) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-mono text-muted-foreground">
-                      {(page - 1) * pageSize + i + 1}
-                    </TableCell>
-                    <TableCell className="font-mono">{p.tcNo || '-'}</TableCell>
-                    <TableCell>
-                      {p.ad} {p.soyad}
-                    </TableCell>
-                    <TableCell>{p.gorev || '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.firma || '-'}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.calismaSekli || '-'}</TableCell>
-                    <TableCell>
-                      <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                        {p.durum}
-                      </span>
-                    </TableCell>
-                    {trainings.map((t) => {
-                      const s = statusFor(p.id, t.id, records, t);
-                      return (
-                        <TableCell key={t.id}>
-                          <button
-                            type="button"
-                            className={`tag ${tagClassFor(s.code)} cursor-pointer`}
-                            title={
-                              s.tarih
-                                ? `${fmtDate(s.tarih)} — düzenlemek için tıklayın`
-                                : 'düzenlemek için tıklayın'
-                            }
-                            onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
-                          >
-                            {s.code === 'valid' ? fmtDate(s.label) : s.label}
-                          </button>
-                        </TableCell>
-                      );
-                    })}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={page}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="max-h-[560px] overflow-auto rounded-lg border border-border"
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>No</TableHead>
+                    <TableHead>TC Kimlik No</TableHead>
+                    <TableHead>Adı Soyadı</TableHead>
+                    <TableHead>Görevi</TableHead>
+                    <TableHead>Firması</TableHead>
+                    <TableHead>Çalışma Şekli</TableHead>
+                    <TableHead>Çalışma Durumu</TableHead>
+                    {trainings.map((t) => (
+                      <TableHead key={t.id}>{t.ad}</TableHead>
+                    ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {paged.map((p, i) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-mono text-muted-foreground">
+                        {(page - 1) * pageSize + i + 1}
+                      </TableCell>
+                      <TableCell className="font-mono">{p.tcNo || '-'}</TableCell>
+                      <TableCell>
+                        {p.ad} {p.soyad}
+                      </TableCell>
+                      <TableCell>{p.gorev || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">{p.firma || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {p.calismaSekli || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <StatusTag tone={toneForDurum(p.durum)}>{p.durum}</StatusTag>
+                      </TableCell>
+                      {trainings.map((t) => {
+                        const s = statusFor(p.id, t.id, recordsFor(p.id, t.id), t);
+                        return (
+                          <TableCell key={t.id}>
+                            <StatusTag
+                              tone={toneForTrainingStatus(s.code)}
+                              className="cursor-pointer"
+                              title={
+                                s.tarih
+                                  ? `${fmtDate(s.tarih)} — düzenlemek için tıklayın`
+                                  : 'düzenlemek için tıklayın'
+                              }
+                              render={
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setEditing({ personnelId: p.id, trainingId: t.id })
+                                  }
+                                />
+                              }
+                            >
+                              {s.code === 'valid' ? fmtDate(s.label) : s.label}
+                            </StatusTag>
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </motion.div>
+          </AnimatePresence>
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Sayfa başına:</span>

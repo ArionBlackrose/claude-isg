@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 const TABS = [
@@ -25,11 +26,18 @@ export function TabsNav({ isAdmin }: { isAdmin: boolean }) {
             key={tab.href}
             href={tab.href}
             className={cn(
-              'border-b-[3px] border-transparent px-4 py-2.5 font-heading text-[17px] font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground',
-              active && 'border-primary text-primary',
+              'relative px-4 py-2.5 font-heading text-[17px] font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground',
+              active && 'text-primary',
             )}
           >
             {tab.label}
+            {active && (
+              <motion.div
+                layoutId="active-tab-indicator"
+                className="absolute inset-x-0 -bottom-px h-[3px] bg-primary"
+                transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+              />
+            )}
           </Link>
         );
       })}

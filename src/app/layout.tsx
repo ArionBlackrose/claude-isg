@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, Barlow_Condensed, JetBrains_Mono } from 'next/font/google';
+import { MotionConfig } from 'motion/react';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
@@ -33,7 +34,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`dark ${inter.variable} ${barlowCondensed.variable} ${jetbrainsMono.variable} antialiased`}
     >
       <body className="min-h-screen bg-background font-sans text-foreground">
-        {children}
+        <MotionConfig reducedMotion="user" transition={{ duration: 0.2, ease: 'easeOut' }}>
+          {children}
+        </MotionConfig>
         <Toaster richColors position="top-right" theme="dark" />
       </body>
     </html>
