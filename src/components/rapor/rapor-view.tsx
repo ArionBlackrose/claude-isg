@@ -17,7 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { statusFor, type TrainingStatusCode } from '@/lib/training-status';
+import { StatusTag } from '@/components/ui/status-tag';
+import { statusFor, fmtDate, toneForTrainingStatus } from '@/lib/training-status';
 
 type Personel = { id: string; ad: string; soyad: string; firma: string | null };
 type Training = { id: string; ad: string; gecerlilikAy: number };
@@ -36,12 +37,6 @@ const DURUM_OPTIONS: { value: string; label: string }[] = [
   { value: 'none', label: 'Almadı' },
 ];
 const DURUM_LABELS = Object.fromEntries(DURUM_OPTIONS.map((o) => [o.value, o.label]));
-
-function fmtDate(d: string) {
-  const [y, m, day] = d.split('-');
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
-}
 
 export function RaporView({
   personnel,
@@ -235,7 +230,7 @@ export function RaporView({
                       <TableCell className="text-muted-foreground">{p.firma || '-'}</TableCell>
                       <TableCell>{t.ad}</TableCell>
                       <TableCell>
-                        <span className={`tag ${tagClassFor(s.code)}`}>{s.label}</span>
+                        <StatusTag tone={toneForTrainingStatus(s.code)}>{s.label}</StatusTag>
                       </TableCell>
                       <TableCell className="font-mono text-muted-foreground">
                         {s.tarih ? fmtDate(s.tarih) : '-'}
@@ -270,12 +265,12 @@ export function RaporView({
                     const s = statusFor(p.id, t.id, records, t);
                     return (
                       <TableCell key={t.id}>
-                        <span
-                          className={`tag ${tagClassFor(s.code)}`}
+                        <StatusTag
+                          tone={toneForTrainingStatus(s.code)}
                           title={s.tarih ? fmtDate(s.tarih) : ''}
                         >
                           {s.code === 'valid' ? fmtDate(s.label) : s.label}
-                        </span>
+                        </StatusTag>
                       </TableCell>
                     );
                   })}
@@ -287,11 +282,4 @@ export function RaporView({
       )}
     </div>
   );
-}
-
-function tagClassFor(code: TrainingStatusCode) {
-  if (code === 'expired') return 'tag-bad';
-  if (code === 'soon') return 'tag-warn';
-  if (code === 'valid') return 'tag-ok';
-  return 'tag-none';
 }

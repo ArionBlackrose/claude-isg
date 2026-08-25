@@ -21,6 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { deletePersonnel } from '@/actions/personnel';
+import { StatusTag } from '@/components/ui/status-tag';
+import { fmtDate, toneForDurum } from '@/lib/training-status';
 import { PersonelEditDialog } from './personel-edit-dialog';
 
 export type PersonelRow = {
@@ -48,13 +50,6 @@ const DURUM_FILTER_LABELS: Record<string, string> = {
   Güncel: 'Güncel',
   Çıkış: 'Çıkış',
 };
-
-function fmtDate(d: string | null) {
-  if (!d) return '-';
-  const [y, m, day] = d.split('-');
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
-}
 
 export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin: boolean }) {
   const router = useRouter();
@@ -150,9 +145,7 @@ export function PersonelTable({ rows, isAdmin }: { rows: PersonelRow[]; isAdmin:
                       {fmtDate(p.iseGirisTarihi)}
                     </TableCell>
                     <TableCell>
-                      <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                        {p.durum}
-                      </span>
+                      <StatusTag tone={toneForDurum(p.durum)}>{p.durum}</StatusTag>
                     </TableCell>
                     <TableCell>
                       {p.history.length ? (

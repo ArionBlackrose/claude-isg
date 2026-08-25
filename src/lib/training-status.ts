@@ -1,3 +1,7 @@
+import { addMonths, daysBetween, todayStr } from './date';
+
+export { addMonths, daysBetween, todayStr, fmtDate } from './date';
+
 export type TrainingRecordLike = {
   personnelId: string;
   trainingId: string;
@@ -18,18 +22,23 @@ export type TrainingStatus = {
   tarih: string | null;
 };
 
-export function addMonths(dateStr: string, months: number): string {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setMonth(d.getMonth() + months);
-  return d.toISOString().slice(0, 10);
+export type StatusTagTone = 'ok' | 'warn' | 'bad' | 'none';
+
+export function toneForTrainingStatus(code: TrainingStatusCode): StatusTagTone {
+  if (code === 'expired') return 'bad';
+  if (code === 'soon') return 'warn';
+  if (code === 'valid') return 'ok';
+  return 'none';
 }
 
-export function daysBetween(a: string, b: string): number {
-  return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
+export function toneForDurum(durum: 'Güncel' | 'Çıkış'): StatusTagTone {
+  return durum === 'Çıkış' ? 'bad' : 'ok';
 }
 
-export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+export function toneForSonuc(sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı'): StatusTagTone {
+  if (sonuc === 'Başarılı') return 'ok';
+  if (sonuc === 'Başarısız') return 'bad';
+  return 'none';
 }
 
 /** Bir personelin bir eğitimdeki güncel durumunu, en son "Başarılı" kayıt ve

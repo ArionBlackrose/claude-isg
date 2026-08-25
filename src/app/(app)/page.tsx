@@ -11,18 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-function fmtDate(d: string) {
-  const [y, m, day] = d.split('-');
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
-}
-
-function tagForSonuc(sonuc: string) {
-  if (sonuc === 'Başarılı') return 'tag-ok';
-  if (sonuc === 'Başarısız') return 'tag-bad';
-  return 'tag-none';
-}
+import { StatusTag } from '@/components/ui/status-tag';
+import { fmtDate, toneForSonuc } from '@/lib/training-status';
 
 export default async function KayitEklePage() {
   const [allPersonnel, trainings, recentRecords] = await Promise.all([
@@ -109,7 +99,7 @@ export default async function KayitEklePage() {
                         {t ? t.ad : <span className="text-muted-foreground">silinmiş</span>}
                       </TableCell>
                       <TableCell>
-                        <span className={`tag ${tagForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                        <StatusTag tone={toneForSonuc(r.sonuc)}>{r.sonuc}</StatusTag>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>
                     </TableRow>
