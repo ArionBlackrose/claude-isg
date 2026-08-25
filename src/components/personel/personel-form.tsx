@@ -16,10 +16,7 @@ import {
 } from '@/components/ui/select';
 import { createPersonnel } from '@/actions/personnel';
 import { personnelSchema, type PersonnelInput, type PersonnelOutput } from '@/schemas/personnel';
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { todayStr } from '@/lib/date';
 
 const DEFAULTS: PersonnelInput = {
   tcNo: '',

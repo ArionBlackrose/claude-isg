@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx';
+import { format } from 'date-fns';
+import { todayStr } from './date';
 
 export function normName(s: string | null | undefined): string {
   return String(s ?? '')
@@ -19,7 +21,13 @@ export function splitName(full: string): { ad: string; soyad: string } {
 /** Excel'deki hücreleri (tarih, sayı, metin) 'YYYY-AA-GG' veya string'e normalize eder. */
 export function cellToText(value: unknown): string {
   if (value == null) return '';
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (value instanceof Date) {
+    // xlsx (cellDates:true) tarihi, YEREL getter'lar (getFullYear/getMonth/getDate)
+    // ile okunduğunda doğru takvim gününü verecek şekilde saat dilimini telafi
+    // ederek Date nesnesi kuruyor. toISOString() (UTC) kullanmak UTC+ dilimlerinde
+    // (ör. Türkiye) tarihi bir gün geriye kaydırıyordu — format() yerel okur.
+    return format(value, 'yyyy-MM-dd');
+  }
   if (typeof value === 'number') {
     // Excel seri tarih numarası olabilir
     const parsed = XLSX.SSF.parse_date_code(value);
@@ -63,5 +71,5 @@ export function downloadWorkbook(aoa: unknown[][], sheetName: string, fileName: 
 }
 
 export function todayFileStamp(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayStr();
 }

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createRecord } from '@/actions/records';
+import { todayStr } from '@/lib/date';
 import { QuickAddPersonnel } from './quick-add-personnel';
 import { QuickAddTraining } from './quick-add-training';
 
@@ -25,10 +26,6 @@ type PersonelOption = {
   firma: string | null;
 };
 type TrainingOption = { id: string; ad: string };
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function KayitForm({
   personnel,

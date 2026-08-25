@@ -20,11 +20,8 @@ import {
   updateRecord,
   uploadRecordCertificate,
 } from '@/actions/records';
+import { todayStr } from '@/lib/date';
 import type { LogRecord } from './log-table';
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function KayitEditDialog({
   open,

@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { personnel, personnelHistory } from '@/db/schema';
 import { requireAdmin, requireSession } from '@/lib/session';
 import { normName, splitName } from '@/lib/excel';
+import { todayStr } from '@/lib/date';
 import { personnelSchema } from '@/schemas/personnel';
 import type { ActionResult, CreateResult } from './training';
 
@@ -91,10 +92,6 @@ export type PersonnelSyncResult =
       skipped: number;
     }
   | { ok: false; error: string };
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 const toUpperTr = (v: string) => v.toLocaleUpperCase('tr-TR');
 
