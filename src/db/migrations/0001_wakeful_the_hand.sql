@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `personnel_tc_no_unique` ON `personnel` (`tc_no`);

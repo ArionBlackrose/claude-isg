@@ -17,14 +17,3 @@ export const recordUpdateSchema = z.object({
 });
 
 export type RecordUpdateInput = z.infer<typeof recordUpdateSchema>;
-
-export const recordExcelRowSchema = z.object({
-  tcNo: z.string().trim().optional(),
-  adSoyad: z.string().trim().optional(),
-  egitimAdi: z.string().trim().min(1),
-  tarih: z.string().trim().min(1),
-  sonuc: z.string().trim().optional(),
-  not: z.string().trim().optional(),
-});
-
-export type RecordExcelRow = z.infer<typeof recordExcelRowSchema>;

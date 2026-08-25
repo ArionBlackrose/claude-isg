@@ -8,6 +8,13 @@
       "when": 1785535193068,
       "tag": "0000_windy_inertia",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787681918659,
+      "tag": "0001_wakeful_the_hand",
+      "breakpoints": true
     }
   ]
 }

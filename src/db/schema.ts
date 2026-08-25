@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { user } from './auth-schema';
 
 export * from './auth-schema';
@@ -9,24 +9,31 @@ const id = () =>
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID());
 
-export const personnel = sqliteTable('personnel', {
-  id: id(),
-  tcNo: text('tc_no'),
-  ad: text('ad').notNull(),
-  soyad: text('soyad').notNull(),
-  gorev: text('gorev'),
-  firma: text('firma'),
-  calismaSekli: text('calisma_sekli'),
-  dogumTarihi: text('dogum_tarihi'),
-  iseGirisTarihi: text('ise_giris_tarihi'),
-  cikisTarihi: text('cikis_tarihi'),
-  durum: text('durum', { enum: ['Güncel', 'Çıkış'] })
-    .notNull()
-    .default('Güncel'),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-});
+export const personnel = sqliteTable(
+  'personnel',
+  {
+    id: id(),
+    tcNo: text('tc_no'),
+    ad: text('ad').notNull(),
+    soyad: text('soyad').notNull(),
+    gorev: text('gorev'),
+    firma: text('firma'),
+    calismaSekli: text('calisma_sekli'),
+    dogumTarihi: text('dogum_tarihi'),
+    iseGirisTarihi: text('ise_giris_tarihi'),
+    cikisTarihi: text('cikis_tarihi'),
+    durum: text('durum', { enum: ['Güncel', 'Çıkış'] })
+      .notNull()
+      .default('Güncel'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  // SQLite unique index NULL değerleri birbirinden ayrı sayar, bu yüzden
+  // tcNo boş olan (henüz TC No girilmemiş) personel kayıtları çakışmaz —
+  // sadece dolu değerler arasında benzersizlik garanti edilir.
+  (table) => [uniqueIndex('personnel_tc_no_unique').on(table.tcNo)],
+);
 
 export const personnelHistory = sqliteTable('personnel_history', {
   id: id(),
