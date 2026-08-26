@@ -32,12 +32,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { StatusTag } from '@/components/ui/status-tag';
 import {
   statusFor,
   fmtDate,
   todayStr,
   daysInMonth,
   tagClassForSonuc,
+  toneForTrainingStatus,
   TONE_CLASSES,
   type TrainingStatusCode,
 } from '@/lib/training-status';
@@ -687,7 +689,7 @@ export function RaporView({
                       <TableCell className="text-muted-foreground">{p.firma || '-'}</TableCell>
                       <TableCell>{t.ad}</TableCell>
                       <TableCell>
-                        <span className={`tag ${tagClassFor(s.code)}`}>{s.label}</span>
+                        <StatusTag tone={toneForTrainingStatus(s.code)}>{s.label}</StatusTag>
                       </TableCell>
                       <TableCell className="font-mono text-muted-foreground">
                         {s.tarih ? fmtDate(s.tarih) : '-'}
@@ -920,11 +922,4 @@ export function RaporView({
       )}
     </div>
   );
-}
-
-function tagClassFor(code: TrainingStatusCode) {
-  if (code === 'expired') return 'tag-bad';
-  if (code === 'soon') return 'tag-warn';
-  if (code === 'valid') return 'tag-ok';
-  return 'tag-none';
 }

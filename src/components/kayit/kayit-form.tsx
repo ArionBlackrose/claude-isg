@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createRecords, type RecordsBatchResult } from '@/actions/records';
-import { todayStr } from '@/lib/training-status';
+import { todayStr } from '@/lib/date';
 import { toUpperTR } from '@/lib/utils';
 import { isDosyaNoRequired } from '@/lib/training-category-rules';
 import { PersonnelMultiSelect } from './personnel-multi-select';

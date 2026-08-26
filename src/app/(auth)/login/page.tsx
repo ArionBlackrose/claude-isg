@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +30,23 @@ function translateAuthError(message: string | undefined): string {
   return ERROR_MESSAGES_TR[message] ?? message;
 }
 
+/** Yalnızca test/geliştirme amaçlı: Resend yapılandırılmamışken üretilen kodu
+ * sunucu logunu açmaya gerek kalmadan toast olarak gösterir. Gerçek e-posta
+ * yapılandırıldığında /api/dev/otp her zaman null döner, hiçbir şey göstermez.
+ * E-posta gönderimi artık after() ile yanıttan sonra çalıştığı için kod hemen
+ * hazır olmayabilir — birkaç kısa denemeyle bekleniyor. */
+async function showDevOtpToast(email: string) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const res = await fetch(`/api/dev/otp?email=${encodeURIComponent(email)}`);
+    const { otp } = (await res.json()) as { otp: string | null };
+    if (otp) {
+      toast(`Test kodu: ${otp}`, { description: email, duration: 15000 });
+      return;
+    }
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [step, setStep] = useState<'email' | 'otp'>('email');
@@ -51,6 +69,7 @@ export default function LoginPage() {
     }
     setEmail(values.email);
     setStep('otp');
+    showDevOtpToast(values.email);
   }
 
   async function onVerifyCode(values: VerifyCodeInput) {
@@ -64,7 +83,6 @@ export default function LoginPage() {
       return;
     }
     router.push('/');
-    router.refresh();
   }
 
   async function handleResend() {
@@ -74,7 +92,9 @@ export default function LoginPage() {
     setIsResending(false);
     if (error) {
       setServerError(translateAuthError(error.message));
+      return;
     }
+    showDevOtpToast(email);
   }
 
   return (

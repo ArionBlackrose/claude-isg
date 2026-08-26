@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
 import { toUpperTR as toUpperTr } from '@/lib/utils';
+import { isAtLeast18, isNotFuture } from '@/lib/date';
 
 const tcNoField = z
   .string()
@@ -10,14 +11,6 @@ const tcNoField = z
     message: 'Geçersiz TC Kimlik No. 11 haneli, geçerli bir kimlik numarası girin.',
   });
 
-function isAtLeast18(dateStr: string): boolean {
-  const birth = new Date(`${dateStr}T00:00:00`);
-  if (Number.isNaN(birth.getTime())) return false;
-  const eighteenthBirthday = new Date(birth);
-  eighteenthBirthday.setFullYear(eighteenthBirthday.getFullYear() + 18);
-  return eighteenthBirthday.getTime() <= Date.now();
-}
-
 const dogumTarihiField = z
   .string()
   .trim()
@@ -25,12 +18,6 @@ const dogumTarihiField = z
   .refine((v) => !v || isAtLeast18(v), {
     message: 'Personel 18 yaşından küçük olamaz.',
   });
-
-function isNotFuture(dateStr: string): boolean {
-  const date = new Date(`${dateStr}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return false;
-  return date.getTime() <= Date.now();
-}
 
 const iseGirisTarihiField = z
   .string()
@@ -76,14 +63,3 @@ export const personnelSchema = z.object({
 export type PersonnelInput = z.input<typeof personnelSchema>;
 /** Doğrulama + büyük harf dönüşümünden sonraki çıktı tipi — server action'lara gönderilen. */
 export type PersonnelOutput = z.output<typeof personnelSchema>;
-
-export const personnelExcelRowSchema = z.object({
-  tcNo: z.string().trim().optional(),
-  adSoyad: z.string().trim().min(1),
-  firma: z.string().trim().optional(),
-  gorev: z.string().trim().optional(),
-  dogumTarihi: z.string().trim().optional(),
-  iseGirisTarihi: z.string().trim().optional(),
-});
-
-export type PersonnelExcelRow = z.infer<typeof personnelExcelRowSchema>;

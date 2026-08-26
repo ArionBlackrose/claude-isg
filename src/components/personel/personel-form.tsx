@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { createPersonnel } from '@/actions/personnel';
 import { personnelSchema, type PersonnelInput, type PersonnelOutput } from '@/schemas/personnel';
-import { todayStr } from '@/lib/training-status';
+import { todayStr } from '@/lib/date';
 import { CALISMA_SEKLI_OPTIONS, DEFAULT_CALISMA_SEKLI } from '@/lib/personnel-constants';
 
 const DEFAULTS: PersonnelInput = {

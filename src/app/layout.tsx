@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Barlow_Condensed, JetBrains_Mono } from 'next/font/google';
+import { MotionConfig } from 'motion/react';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { ThemeColorSync } from '@/components/layout/theme-color-sync';
@@ -52,7 +53,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="min-h-screen bg-background font-sans text-foreground">
         <ThemeProvider attribute="class" defaultTheme="dark" themes={['dark', 'light']}>
           <ThemeColorSync />
-          {children}
+          <MotionConfig reducedMotion="user" transition={{ duration: 0.2, ease: 'easeOut' }}>
+            {children}
+          </MotionConfig>
           <Toaster richColors position="top-center" />
         </ThemeProvider>
       </body>

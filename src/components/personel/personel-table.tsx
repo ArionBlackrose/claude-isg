@@ -21,7 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { deletePersonnel } from '@/actions/personnel';
-import { fmtDate } from '@/lib/training-status';
+import { StatusTag } from '@/components/ui/status-tag';
+import { fmtDate, toneForDurum } from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
 import { toUpperTR } from '@/lib/utils';
 import { PersonelEditDialog } from './personel-edit-dialog';
@@ -292,9 +293,7 @@ export function PersonelTable({
                       {fmtDate(p.iseGirisTarihi)}
                     </TableCell>
                     <TableCell>
-                      <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                        {p.durum}
-                      </span>
+                      <StatusTag tone={toneForDurum(p.durum)}>{p.durum}</StatusTag>
                     </TableCell>
                     <TableCell className="space-x-2 whitespace-nowrap">
                       <Button size="sm" variant="outline" onClick={() => setEditingPersonel(p)}>

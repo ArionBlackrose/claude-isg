@@ -27,7 +27,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { addMonths, daysBetween, todayStr, fmtDate, tagClassFor } from '@/lib/training-status';
+import { StatusTag } from '@/components/ui/status-tag';
+import {
+  addMonths,
+  daysBetween,
+  todayStr,
+  fmtDate,
+  toneForDurum,
+  toneForTrainingStatus,
+} from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
 import { toUpperTR } from '@/lib/utils';
 import { TRAINING_CATEGORIES } from '@/schemas/training';
@@ -180,6 +188,24 @@ export function LogTable({
     },
     [successRecordsByKey],
   );
+
+  // records dizisini personel+eğitim çiftine göre önceden grupluyoruz —
+  // statusFor'un her hücre için tüm records dizisini filtreleyip sıralaması yerine
+  // O(1) lookup ile önceden hazırlanmış, zaten en güncele göre sıralı bir liste kullanır.
+  const recordsByPersonTraining = useMemo(() => {
+    const map = new Map<string, LogRecord[]>();
+    for (const r of records) {
+      const key = `${r.personnelId}:${r.trainingId}`;
+      const list = map.get(key);
+      if (list) list.push(r);
+      else map.set(key, [r]);
+    }
+    return map;
+  }, [records]);
+
+  function recordsFor(personnelId: string, trainingId: string): LogRecord[] {
+    return recordsByPersonTraining.get(`${personnelId}:${trainingId}`) ?? [];
+  }
 
   const filtered = useMemo(() => {
     const q = toUpperTR(search);
@@ -446,21 +472,24 @@ export function LogTable({
                       {p.gorev || '-'} · {p.firma || '-'}
                     </div>
                   </div>
-                  <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                    {p.durum}
-                  </span>
+                  <StatusTag tone={toneForDurum(p.durum)}>{p.durum}</StatusTag>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {statuses.map(({ t, s }) => (
-                    <button
+                    <StatusTag
                       key={t.id}
-                      type="button"
-                      className={`tag ${tagClassFor(s.code)} cursor-pointer`}
+                      tone={toneForTrainingStatus(s.code)}
+                      className="cursor-pointer"
                       title={t.ad}
-                      onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
+                      render={
+                        <button
+                          type="button"
+                          onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
+                        />
+                      }
                     >
                       {t.ad}: {s.code === 'valid' ? fmtDate(s.label) : s.label}
-                    </button>
+                    </StatusTag>
                   ))}
                 </div>
               </div>
@@ -504,24 +533,27 @@ export function LogTable({
                   </TableCell>
                   <TableCell className="text-muted-foreground">{p.calismaSekli || '-'}</TableCell>
                   <TableCell>
-                    <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                      {p.durum}
-                    </span>
+                    <StatusTag tone={toneForDurum(p.durum)}>{p.durum}</StatusTag>
                   </TableCell>
                   {statuses.map(({ t, s }) => (
                     <TableCell key={t.id} className="w-40 text-center">
-                      <button
-                        type="button"
-                        className={`tag ${tagClassFor(s.code)} cursor-pointer`}
+                      <StatusTag
+                        tone={toneForTrainingStatus(s.code)}
+                        className="cursor-pointer"
                         title={
                           s.tarih
                             ? `${fmtDate(s.tarih)} — düzenlemek için tıklayın`
                             : 'düzenlemek için tıklayın'
                         }
-                        onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
+                        render={
+                          <button
+                            type="button"
+                            onClick={() => setEditing({ personnelId: p.id, trainingId: t.id })}
+                          />
+                        }
                       >
                         {s.code === 'valid' ? fmtDate(s.label) : s.label}
-                      </button>
+                      </StatusTag>
                     </TableCell>
                   ))}
                 </TableRow>

@@ -12,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
+import { StatusTag } from '@/components/ui/status-tag';
+import { fmtDate, toneForSonuc } from '@/lib/training-status';
 import { RESTRICTED_TRAINING_CATEGORY } from '@/lib/training-category-rules';
 import { requirePanelAccess } from '@/lib/session';
 
@@ -105,7 +106,7 @@ export default async function KayitEklePage() {
                       {t ? t.ad : <span className="text-muted-foreground">silinmiş</span>}
                     </TableCell>
                     <TableCell>
-                      <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                      <StatusTag tone={toneForSonuc(r.sonuc)}>{r.sonuc}</StatusTag>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{r.dosyaNo || '-'}</TableCell>
                     <TableCell className="text-muted-foreground">{r.not || '-'}</TableCell>

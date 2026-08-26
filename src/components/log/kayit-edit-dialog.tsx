@@ -21,7 +21,7 @@ import {
   updateRecord,
   uploadRecordCertificate,
 } from '@/actions/records';
-import { todayStr } from '@/lib/training-status';
+import { todayStr } from '@/lib/date';
 import { useConfirm } from '@/hooks/use-confirm';
 import {
   canUploadCertificate,

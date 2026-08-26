@@ -1,3 +1,7 @@
+import { addMonths, daysBetween, todayStr } from './date';
+
+export { addMonths, daysBetween, todayStr, fmtDate } from './date';
+
 export type TrainingRecordLike = {
   personnelId: string;
   trainingId: string;
@@ -18,38 +22,23 @@ export type TrainingStatus = {
   tarih: string | null;
 };
 
-/** Verilen yıl/ay (1-12) için ayın kaç gün çektiğini döner. */
-export function daysInMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+export type StatusTagTone = 'ok' | 'warn' | 'bad' | 'none';
+
+export function toneForTrainingStatus(code: TrainingStatusCode): StatusTagTone {
+  if (code === 'expired') return 'bad';
+  if (code === 'soon') return 'warn';
+  if (code === 'valid') return 'ok';
+  return 'none';
 }
 
-export function addMonths(dateStr: string, months: number): string {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const totalMonths = year * 12 + (month - 1) + months;
-  const targetYear = Math.floor(totalMonths / 12);
-  const targetMonthIndex = ((totalMonths % 12) + 12) % 12;
-  const targetDay = Math.min(day, daysInMonth(targetYear, targetMonthIndex + 1));
-  const mm = String(targetMonthIndex + 1).padStart(2, '0');
-  const dd = String(targetDay).padStart(2, '0');
-  return `${targetYear}-${mm}-${dd}`;
+export function toneForDurum(durum: 'Güncel' | 'Çıkış'): StatusTagTone {
+  return durum === 'Çıkış' ? 'bad' : 'ok';
 }
 
-export function daysBetween(a: string, b: string): number {
-  return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
-}
-
-const istanbulDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' });
-
-export function todayStr(): string {
-  return istanbulDateFormatter.format(new Date());
-}
-
-/** "YYYY-MM-DD" formatındaki bir tarihi "GG.AA.YYYY" olarak biçimlendirir. */
-export function fmtDate(d: string | null | undefined): string {
-  if (!d) return '-';
-  const [y, m, day] = d.split('-');
-  if (!y || !m || !day) return d;
-  return `${day}.${m}.${y}`;
+export function toneForSonuc(sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı'): StatusTagTone {
+  if (sonuc === 'Başarılı') return 'ok';
+  if (sonuc === 'Başarısız') return 'bad';
+  return 'none';
 }
 
 /** Bir personelin bir eğitimdeki güncel durumunu, en son "Başarılı" kayıt ve

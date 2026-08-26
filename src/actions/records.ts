@@ -331,6 +331,13 @@ export async function deleteRecord(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+const ALLOWED_CERTIFICATE_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
 export async function uploadRecordCertificate(
   recordId: string,
   formData: FormData,
@@ -342,6 +349,9 @@ export async function uploadRecordCertificate(
   }
   if (file.size > MAX_CERTIFICATE_SIZE) {
     return { ok: false, error: 'Dosya boyutu 10 MB sınırını aşıyor.' };
+  }
+  if (!ALLOWED_CERTIFICATE_MIME_TYPES.has(file.type)) {
+    return { ok: false, error: 'Yalnızca PDF, JPEG, PNG veya WEBP dosyaları yüklenebilir.' };
   }
 
   const [existing] = await db.select().from(trainingRecord).where(eq(trainingRecord.id, recordId));
@@ -365,7 +375,7 @@ export async function uploadRecordCertificate(
     const { fileId, webViewLink } = await replaceCertificate({
       existingFileId: existing.driveFileId,
       fileName: `${recordId}-${file.name}`,
-      mimeType: file.type || 'application/octet-stream',
+      mimeType: file.type,
       buffer,
     });
     await db
