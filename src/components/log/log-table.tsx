@@ -189,24 +189,6 @@ export function LogTable({
     [successRecordsByKey],
   );
 
-  // records dizisini personel+eğitim çiftine göre önceden grupluyoruz —
-  // statusFor'un her hücre için tüm records dizisini filtreleyip sıralaması yerine
-  // O(1) lookup ile önceden hazırlanmış, zaten en güncele göre sıralı bir liste kullanır.
-  const recordsByPersonTraining = useMemo(() => {
-    const map = new Map<string, LogRecord[]>();
-    for (const r of records) {
-      const key = `${r.personnelId}:${r.trainingId}`;
-      const list = map.get(key);
-      if (list) list.push(r);
-      else map.set(key, [r]);
-    }
-    return map;
-  }, [records]);
-
-  function recordsFor(personnelId: string, trainingId: string): LogRecord[] {
-    return recordsByPersonTraining.get(`${personnelId}:${trainingId}`) ?? [];
-  }
-
   const filtered = useMemo(() => {
     const q = toUpperTR(search);
     return personnel.filter((p) => {

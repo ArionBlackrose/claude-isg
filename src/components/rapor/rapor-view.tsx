@@ -41,7 +41,6 @@ import {
   tagClassForSonuc,
   toneForTrainingStatus,
   TONE_CLASSES,
-  type TrainingStatusCode,
 } from '@/lib/training-status';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
 import { TRAINING_CATEGORIES } from '@/schemas/training';

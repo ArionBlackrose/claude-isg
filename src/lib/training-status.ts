@@ -1,6 +1,11 @@
-import { addMonths, daysBetween, todayStr } from './date';
+import { addMonths, daysBetween, todayStr, fmtDate } from './date';
 
 export { addMonths, daysBetween, todayStr, fmtDate } from './date';
+
+/** Verilen yıl/ay (1-12) için ayın kaç gün çektiğini döner. */
+export function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
 
 export type TrainingRecordLike = {
   personnelId: string;
@@ -35,8 +40,10 @@ export function toneForDurum(durum: 'Güncel' | 'Çıkış'): StatusTagTone {
   return durum === 'Çıkış' ? 'bad' : 'ok';
 }
 
-export function toneForSonuc(sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı'): StatusTagTone {
-  if (sonuc === 'Başarılı') return 'ok';
+export function toneForSonuc(
+  sonuc: 'Başarılı' | 'Başarısız' | 'Katılmadı' | 'Katıldı',
+): StatusTagTone {
+  if (sonuc === 'Başarılı' || sonuc === 'Katıldı') return 'ok';
   if (sonuc === 'Başarısız') return 'bad';
   return 'none';
 }
