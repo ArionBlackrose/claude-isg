@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { training, user } from '@/db/schema';
@@ -18,9 +19,14 @@ export default async function PasaportAyarlariPage() {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-border bg-panel p-5">
-        <h2 className="mb-1 font-heading text-xl font-bold tracking-wide uppercase">
-          Pasaportta Gösterilecek Eğitimler
-        </h2>
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-heading text-xl font-bold tracking-wide uppercase">
+            Pasaportta Gösterilecek Eğitimler
+          </h2>
+          <Link href="/pasaport" className="text-sm text-primary hover:underline">
+            Sorgu Panelini Aç →
+          </Link>
+        </div>
         <p className="mb-4 text-xs text-muted-foreground">
           Eğitim Pasaportu panelinde dış kullanıcılara sadece burada işaretlediğiniz eğitimlerin
           durumu gösterilir.

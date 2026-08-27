@@ -12,7 +12,7 @@ export default async function ExternalLayout({ children }: { children: React.Rea
   return (
     <div className="mx-auto max-w-3xl px-4 py-5 sm:px-5 sm:py-7">
       <Header userName={session.user.name} userEmail={session.user.email} />
-      <ExternalNav />
+      <ExternalNav isAdmin={session.user.role === 'admin'} />
       <main>{children}</main>
     </div>
   );
