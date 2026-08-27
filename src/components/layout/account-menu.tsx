@@ -3,11 +3,10 @@
 import { useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { ChevronDownIcon, LogOutIcon, MoonIcon, SunIcon, UserRoundCogIcon } from 'lucide-react';
+import { ChevronDownIcon, LogOutIcon, MoonIcon, SunIcon } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
@@ -49,12 +48,10 @@ export function AccountMenu({ userName, userEmail }: { userName: string; userEma
         <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="flex flex-col gap-0.5 px-1.5 py-1.5">
-            <span className="truncate text-sm font-semibold text-foreground">{userName}</span>
-            <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
-          </DropdownMenuLabel>
-        </DropdownMenuGroup>
+        <div className="flex flex-col gap-0.5 px-1.5 py-1.5">
+          <span className="truncate text-sm font-semibold text-foreground">{userName}</span>
+          <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup value={mounted ? theme : undefined} onValueChange={setTheme}>
           <DropdownMenuLabel>Tema</DropdownMenuLabel>
@@ -66,14 +63,9 @@ export function AccountMenu({ userName, userEmail }: { userName: string; userEma
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem onClick={handleSignOut}>
-            <UserRoundCogIcon /> Hesap Değiştir
-          </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
-            <LogOutIcon /> Çıkış Yap
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
+        <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
+          <LogOutIcon /> Çıkış Yap
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

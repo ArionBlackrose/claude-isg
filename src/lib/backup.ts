@@ -1,20 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { sqlite } from '@/db';
+import { todayStr } from './date';
 
 const BACKUP_DIR = path.join(process.cwd(), 'backups');
 // Günde bir yedek alındığını varsayarsak yaklaşık 2 haftalık geçmiş tutulur.
 const RETENTION_COUNT = 14;
 
-const istanbulDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' });
-
-function todayStamp(): string {
-  return istanbulDateFormatter.format(new Date());
-}
-
 function hasTodaysBackup(): boolean {
   if (!fs.existsSync(BACKUP_DIR)) return false;
-  const prefix = `app-${todayStamp()}`;
+  const prefix = `app-${todayStr()}`;
   return fs.readdirSync(BACKUP_DIR).some((f) => f.startsWith(prefix));
 }
 
@@ -48,7 +43,7 @@ export async function runDailyBackupIfNeeded(): Promise<void> {
  * içinde birden çok kez çağrılması dosya çakışmasına yol açmaz. */
 export async function runManualBackup(): Promise<void> {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
-  const dest = path.join(BACKUP_DIR, `app-${todayStamp()}-${Date.now()}.db`);
+  const dest = path.join(BACKUP_DIR, `app-${todayStr()}-${Date.now()}.db`);
   await sqlite.backup(dest);
   pruneOldBackups();
 }
