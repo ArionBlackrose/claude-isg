@@ -1,4 +1,4 @@
-import { todayStr } from './date';
+import { formatDateOnly, todayStr } from './date';
 
 // `xlsx` (~500KB) yalnızca gerçekten bir Excel dosyası okunduğunda/yazıldığında
 // yüklenir — bu modül sayfa açılışında import edilen birçok bileşene (dışa
@@ -33,11 +33,12 @@ export function splitName(full: string): { ad: string; soyad: string } {
  * modülün gerçek girdisi (personel eğitim kayıtları) için imkansız bir aralık
  * olduğundan kasıtlı olarak düzeltilmemiştir. */
 function excelSerialToDateStr(serial: number): string {
-  const d = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
-  const y = String(d.getUTCFullYear()).padStart(4, '0');
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  const utc = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+  // date-fns'in format()'u YEREL getter'ları kullanır; UTC bileşenlerini
+  // sunucunun saat dilimine bakılmaksızın doğru formatlayabilmek için önce
+  // aynı Y/A/G değerlerine sahip yerel bir Date'e taşınır.
+  const local = new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
+  return formatDateOnly(local);
 }
 
 /** Excel'deki hücreleri (tarih, sayı, metin) 'YYYY-AA-GG' veya string'e
@@ -49,12 +50,9 @@ export function cellToText(value: unknown): string {
     // xlsx (cellDates:true) tarihi, YEREL getter'lar (getFullYear/getMonth/getDate)
     // ile okunduğunda doğru takvim gününü verecek şekilde saat dilimini telafi
     // ederek Date nesnesi kuruyor. toISOString() (UTC) kullanmak UTC+ dilimlerinde
-    // (ör. Türkiye) tarihi bir gün geriye kaydırıyordu — yerel getter'larla okumak
-    // date-fns'in format()'u gibi doğru sonucu verir.
-    const y = String(value.getFullYear()).padStart(4, '0');
-    const m = String(value.getMonth() + 1).padStart(2, '0');
-    const d = String(value.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
+    // (ör. Türkiye) tarihi bir gün geriye kaydırırdı — date-fns'in format()'u
+    // da tıpkı bunun gibi yerel getter'lara dayandığından doğru sonucu verir.
+    return formatDateOnly(value);
   }
   if (typeof value === 'number') {
     // Excel seri tarih numarası olabilir (cellDates:true kullanıldığında

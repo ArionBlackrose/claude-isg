@@ -3,6 +3,7 @@ import {
   differenceInCalendarDays,
   differenceInYears,
   format,
+  getDaysInMonth as getDaysInMonthFns,
   isAfter,
   isValid,
   parse,
@@ -58,4 +59,29 @@ export function isNotFuture(dateStr: string): boolean {
   const date = parseDateOnly(dateStr);
   if (!isValid(date)) return false;
   return !isAfter(date, new Date());
+}
+
+/** "YYYY-MM-DD" metninin gerçek (var olan) bir takvim gününe karşılık gelip
+ * gelmediğini kontrol eder. */
+export function isValidDateOnly(dateStr: string): boolean {
+  return isValid(parseDateOnly(dateStr));
+}
+
+/** Verilen yıl/ay (1-12) için ayın kaç gün çektiğini döner. Sadece takvimsel
+ * bir gerçek olduğundan (belirli bir ana/saat dilimine bağlı değil) yerel
+ * `Date` kurucusu kullanılır — UTC'ye gerek yoktur. */
+export function daysInMonth(year: number, month: number): number {
+  return getDaysInMonthFns(new Date(year, month - 1, 1));
+}
+
+/** Bir `Date` nesnesini, sunucunun saat dilimi ne olursa olsun tutarlı
+ * olacak şekilde yerel takvim bileşenleriyle "YYYY-MM-DD" formatına çevirir. */
+export function formatDateOnly(date: Date): string {
+  return format(date, DATE_ONLY_FORMAT);
+}
+
+/** Bir tarih+saat değerini "GG.AA.YYYY SS:DD" olarak döner. */
+export function fmtDateTime(d: Date | string): string {
+  const date = typeof d === 'string' ? new Date(d) : d;
+  return format(date, 'dd.MM.yyyy HH:mm');
 }

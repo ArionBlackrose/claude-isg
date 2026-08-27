@@ -1,11 +1,6 @@
 import { addMonths, daysBetween, todayStr, fmtDate } from './date';
 
-export { addMonths, daysBetween, todayStr, fmtDate } from './date';
-
-/** Verilen yıl/ay (1-12) için ayın kaç gün çektiğini döner. */
-export function daysInMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
-}
+export { addMonths, daysBetween, daysInMonth, fmtDate, fmtDateTime, todayStr } from './date';
 
 export type TrainingRecordLike = {
   personnelId: string;
@@ -122,18 +117,6 @@ export const TONE_CLASSES = {
     border: 'hover:border-danger',
   },
 } as const;
-
-/** Bir tarih+saat değerini "GG.AA.YYYY SS:DD" olarak tr-TR biçiminde döner. */
-export function fmtDateTime(d: Date | string): string {
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleString('tr-TR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 /** Bir eğitim kaydının sonuç değerine (Başarılı/Başarısız/Katılmadı)
  * karşılık gelen rozet (tag) CSS sınıfı. */

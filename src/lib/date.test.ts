@@ -1,5 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
-import { addMonths, daysBetween, fmtDate, isAtLeast18, isNotFuture, todayStr } from './date';
+import {
+  addMonths,
+  daysBetween,
+  daysInMonth,
+  fmtDate,
+  fmtDateTime,
+  formatDateOnly,
+  isAtLeast18,
+  isNotFuture,
+  isValidDateOnly,
+  todayStr,
+} from './date';
 
 describe('addMonths', () => {
   it('aya ekleme yapar ve YYYY-MM-DD dondurur', () => {
@@ -87,5 +98,46 @@ describe('isNotFuture', () => {
 
   it('gecersiz tarih icin false dondurur', () => {
     expect(isNotFuture('gecersiz')).toBe(false);
+  });
+});
+
+describe('daysInMonth', () => {
+  it('subatta artik yil disinda 28 gun dondurur', () => {
+    expect(daysInMonth(2025, 2)).toBe(28);
+  });
+
+  it('artik yilda subat icin 29 gun dondurur', () => {
+    expect(daysInMonth(2024, 2)).toBe(29);
+  });
+
+  it('30 ve 31 cekern aylari dogru hesaplar', () => {
+    expect(daysInMonth(2025, 4)).toBe(30);
+    expect(daysInMonth(2025, 1)).toBe(31);
+  });
+});
+
+describe('formatDateOnly', () => {
+  it('yerel bir Date nesnesini YYYY-MM-DD formatina cevirir', () => {
+    expect(formatDateOnly(new Date(2025, 2, 7))).toBe('2025-03-07');
+  });
+});
+
+describe('isValidDateOnly', () => {
+  it('gecerli bir YYYY-MM-DD tarihini kabul eder', () => {
+    expect(isValidDateOnly('2025-03-07')).toBe(true);
+  });
+
+  it('gecersiz metni reddeder', () => {
+    expect(isValidDateOnly('gecersiz')).toBe(false);
+  });
+});
+
+describe('fmtDateTime', () => {
+  it('string girdiyi GG.AA.YYYY SS:DD formatina cevirir', () => {
+    expect(fmtDateTime('2025-03-07T14:30:00')).toBe('07.03.2025 14:30');
+  });
+
+  it('Date nesnesini de kabul eder', () => {
+    expect(fmtDateTime(new Date(2025, 2, 7, 9, 5))).toBe('07.03.2025 09:05');
   });
 });

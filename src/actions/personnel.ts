@@ -6,7 +6,7 @@ import { db } from '@/db';
 import { personnel, personnelHistory } from '@/db/schema';
 import { canDeletePersonnel, requireAdmin, requirePanelAccess } from '@/lib/session';
 import { normName, splitName } from '@/lib/excel';
-import { todayStr } from '@/lib/date';
+import { isValidDateOnly, todayStr } from '@/lib/date';
 import { isValidTcKimlikNo } from '@/lib/tc-kimlik-no';
 import { logActivity, diffSummary } from '@/lib/audit';
 import { toUpperTR as toUpperTr } from '@/lib/utils';
@@ -336,7 +336,7 @@ export async function setMykBelgeGecerlilikTarihi(
   gecerlilikTarihi: string | null,
 ): Promise<ActionResult> {
   const session = await requirePanelAccess('panel.personel');
-  if (gecerlilikTarihi && Number.isNaN(new Date(`${gecerlilikTarihi}T00:00:00`).getTime())) {
+  if (gecerlilikTarihi && !isValidDateOnly(gecerlilikTarihi)) {
     return { ok: false, error: 'Geçersiz tarih.' };
   }
   const [existing] = await db.select().from(personnel).where(eq(personnel.id, personnelId));
