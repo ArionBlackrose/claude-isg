@@ -14,10 +14,40 @@ export default async function RaporPage({
 }) {
   await requirePanelAccess('panel.rapor');
   const params = await searchParams;
+  // RaporView (client component) sadece bu alt kümeyi okur — RSC sınırından
+  // geçen veriyi küçük tutmak için tam satır yerine bilerek dar bir seçim
+  // yapılır (bkz. src/components/rapor/types.ts).
   const [allPersonnel, trainings, records, projectSettings] = await Promise.all([
-    db.select().from(personnel),
-    db.select().from(training).orderBy(training.ad),
-    db.select().from(trainingRecord),
+    db
+      .select({
+        id: personnel.id,
+        tcNo: personnel.tcNo,
+        ad: personnel.ad,
+        soyad: personnel.soyad,
+        gorev: personnel.gorev,
+        firma: personnel.firma,
+        calismaSekli: personnel.calismaSekli,
+        durum: personnel.durum,
+      })
+      .from(personnel),
+    db
+      .select({
+        id: training.id,
+        ad: training.ad,
+        kategori: training.kategori,
+        gecerlilikAy: training.gecerlilikAy,
+        egitimSuresi: training.egitimSuresi,
+      })
+      .from(training)
+      .orderBy(training.ad),
+    db
+      .select({
+        personnelId: trainingRecord.personnelId,
+        trainingId: trainingRecord.trainingId,
+        tarih: trainingRecord.tarih,
+        sonuc: trainingRecord.sonuc,
+      })
+      .from(trainingRecord),
     getProjectSettings(),
   ]);
 
