@@ -38,7 +38,7 @@ import {
   fmtDate,
   todayStr,
   daysInMonth,
-  tagClassForSonuc,
+  toneForSonuc,
   toneForTrainingStatus,
   TONE_CLASSES,
 } from '@/lib/training-status';
@@ -654,7 +654,7 @@ export function RaporView({
                         {fmtDate(r.tarih)}
                       </TableCell>
                       <TableCell>
-                        <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                        <StatusTag tone={toneForSonuc(r.sonuc)}>{r.sonuc}</StatusTag>
                       </TableCell>
                     </TableRow>
                   ))}

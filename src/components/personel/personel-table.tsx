@@ -201,9 +201,7 @@ export function PersonelTable({
                   >
                     {p.ad} {p.soyad}
                   </button>
-                  <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                    {p.durum}
-                  </span>
+                  <StatusTag tone={toneForDurum(p.durum)}>{p.durum}</StatusTag>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
                   <div>

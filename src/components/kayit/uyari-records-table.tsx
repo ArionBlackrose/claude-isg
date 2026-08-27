@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { fmtDate, tagClassForSonuc } from '@/lib/training-status';
+import { fmtDate, toneForSonuc } from '@/lib/training-status';
+import { StatusTag } from '@/components/ui/status-tag';
 import { toUpperTR } from '@/lib/utils';
 import { isDosyaNoRequired } from '@/lib/training-category-rules';
 import { deleteRecord, updateRecord } from '@/actions/records';
@@ -287,7 +288,7 @@ export function UyariRecordsTable({
                           <div className="font-semibold">{r.personelAdi}</div>
                           <div className="mt-0.5 text-xs text-muted-foreground">{r.egitimAdi}</div>
                         </div>
-                        <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                        <StatusTag tone={toneForSonuc(r.sonuc)}>{r.sonuc}</StatusTag>
                       </div>
                       <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
                         <div>
@@ -440,7 +441,7 @@ export function UyariRecordsTable({
                     <TableCell>{r.personelAdi}</TableCell>
                     <TableCell>{r.egitimAdi}</TableCell>
                     <TableCell>
-                      <span className={`tag ${tagClassForSonuc(r.sonuc)}`}>{r.sonuc}</span>
+                      <StatusTag tone={toneForSonuc(r.sonuc)}>{r.sonuc}</StatusTag>
                     </TableCell>
                     <TableCell className="font-mono text-muted-foreground">
                       {r.sonuc === 'Katıldı' ? fmtDate(r.katilimTarihi) : '-'}

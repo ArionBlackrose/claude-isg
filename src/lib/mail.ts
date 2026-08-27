@@ -43,15 +43,10 @@ async function sendMail(to: string | string[], subject: string, html: string): P
 
 export async function sendOtpEmail(email: string, otp: string): Promise<void> {
   if (!isEmailConfigured()) {
-    // Resend yapılandırılmamış — geliştirme/kurulum sürecinde kodu sunucu
-    // logunda gösteriyoruz (ve login ekranındaki test toast'ı okuyabilsin
-    // diye bellekte tutuyoruz) ki giriş akışı Resend olmadan da test
-    // edilebilsin.
+    // Resend yapılandırılmamış — geliştirme/kurulum sürecinde kodu bellekte
+    // tutuyoruz ki login ekranındaki test toast'ı okuyabilsin (asıl "gönderilemedi"
+    // logu ve genel not-configured davranışı `sendMail`'in tek sorumluluğudur).
     devOtpByEmail.set(email, { otp, issuedAt: Date.now() });
-    console.warn(
-      `[mail] RESEND_API_KEY/RESEND_FROM_EMAIL tanımlı değil. ${email} için giriş kodu: ${otp}`,
-    );
-    return;
   }
 
   await sendMail(

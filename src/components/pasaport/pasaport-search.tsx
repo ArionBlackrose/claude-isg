@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { fmtDate } from '@/lib/training-status';
+import { fmtDate, toneForDurum } from '@/lib/training-status';
+import { StatusTag } from '@/components/ui/status-tag';
 import { downloadWorkbook, todayFileStamp } from '@/lib/excel';
 import { searchPassport, type PassportResult } from '@/actions/passport';
 
@@ -151,11 +152,7 @@ export function PasaportSearch() {
                       {p.firma ? `· ${p.firma}` : ''}
                     </p>
                   </div>
-                  {p.durum && (
-                    <span className={`tag ${p.durum === 'Çıkış' ? 'tag-bad' : 'tag-ok'}`}>
-                      {p.durum}
-                    </span>
-                  )}
+                  {p.durum && <StatusTag tone={toneForDurum(p.durum)}>{p.durum}</StatusTag>}
                 </div>
                 {(() => {
                   const taken = p.trainings.filter((t) => t.code !== 'none');

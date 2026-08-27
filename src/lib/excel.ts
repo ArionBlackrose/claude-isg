@@ -27,7 +27,11 @@ export function splitName(full: string): { ad: string; soyad: string } {
 /** Excel'in "1899-12-30 = gün 0" seri tarih numarasını 'YYYY-AA-GG'ye çevirir
  * — tam gün sayısı olduğu için UTC/yerel saat dilimi ayrımı burada önemsizdir
  * (asıl saat dilimi hatası aşağıdaki `Date` dalında, xlsx'ten zaten bir Date
- * nesnesi olarak gelen hücrelerde ortaya çıkıyordu). */
+ * nesnesi olarak gelen hücrelerde ortaya çıkıyordu). Excel'in ünlü "1900 artık
+ * yıl" hatasını (seri 60 = var olmayan 29 Şubat 1900) taklit etmez; bu yüzden
+ * 1 Mart 1900'den önceki tarihler (seri < 61) bir gün hatalı hesaplanır — bu
+ * modülün gerçek girdisi (personel eğitim kayıtları) için imkansız bir aralık
+ * olduğundan kasıtlı olarak düzeltilmemiştir. */
 function excelSerialToDateStr(serial: number): string {
   const d = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
   const y = String(d.getUTCFullYear()).padStart(4, '0');

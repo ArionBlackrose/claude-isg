@@ -10,6 +10,12 @@ import {
 
 const DATE_ONLY_FORMAT = 'yyyy-MM-dd';
 
+/** Sunucunun yerel saat dilimi ne olursa olsun (ör. UTC bir cloud host),
+ * İstanbul'daki güncel takvim gününü "YYYY-MM-DD" olarak verir — server-local
+ * `new Date()`'e güvenmek, sunucu UTC'de çalışırken 00:00-03:00 İstanbul
+ * saatleri arasında "bugün"ü bir gün geriye kaydırırdı. */
+const istanbulDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul' });
+
 /** "YYYY-MM-DD" formatındaki bir metni yerel gece yarısı Date nesnesine çevirir.
  * Ayrıştırma ve formatlama her zaman yerel saatte tutarlı yapılır — UTC'ye
  * geçiş yapılmaz, bu yüzden ay/gün hesaplarında saat dilimi kayması olmaz. */
@@ -17,9 +23,10 @@ export function parseDateOnly(dateStr: string): Date {
   return parse(dateStr, DATE_ONLY_FORMAT, new Date());
 }
 
-/** Bugünün tarihini "YYYY-MM-DD" formatında döndürür (yerel saate göre). */
+/** Bugünün tarihini "YYYY-MM-DD" formatında döndürür (İstanbul saatine göre,
+ * sunucunun kendi yerel saat dilimi ne olursa olsun). */
 export function todayStr(): string {
-  return format(new Date(), DATE_ONLY_FORMAT);
+  return istanbulDateFormatter.format(new Date());
 }
 
 export function addMonths(dateStr: string, months: number): string {
