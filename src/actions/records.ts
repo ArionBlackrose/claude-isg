@@ -496,8 +496,18 @@ export async function importRecordsFromExcel(
   }
 
   if (toInsert.length) {
-    for (const record of toInsert) {
-      await db.insert(trainingRecord).values(record);
+    // better-sqlite3 sürücüsü senkron çalıştığı için db.transaction() içindeki
+    // callback async OLAMAZ; kayıtlar tek bir işlemde ya birlikte yazılır ya
+    // da hiçbiri yazılmaz (yarıda kesilen bir içe aktarma tutarsız veri
+    // bırakmaz).
+    try {
+      db.transaction((tx) => {
+        for (const record of toInsert) {
+          tx.insert(trainingRecord).values(record).run();
+        }
+      });
+    } catch {
+      return { ok: false, error: 'Kayıtlar oluşturulamadı. Hiçbir kayıt eklenmedi.' };
     }
   }
 
