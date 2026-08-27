@@ -9,7 +9,7 @@ const THEME_COLORS: Record<string, string> = {
 };
 
 /** `<meta name="theme-color">` etiketini, işletim sistemi ayarı yerine
- * kullanıcının ThemeSwitcher'dan seçtiği gerçek temaya göre günceller —
+ * kullanıcının hesap menüsünden seçtiği gerçek temaya göre günceller —
  * aksi halde tarayıcı chrome rengi seçili temayla uyumsuz kalır. */
 export function ThemeColorSync() {
   const { resolvedTheme } = useTheme();

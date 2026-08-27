@@ -1,10 +1,14 @@
-import { LogoutButton } from './logout-button';
-import { ThemeSwitcher } from './theme-switcher';
+import Link from 'next/link';
+import { AccountMenu } from './account-menu';
+import { LogoMark } from './logo-mark';
 
 export function Header({ userName, userEmail }: { userName: string; userEmail: string }) {
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b-[3px] border-primary pb-4">
       <div className="flex items-center gap-3.5">
+        <Link href="/" aria-label="Ana sayfaya git" className="shrink-0 text-primary">
+          <LogoMark className="h-11 w-11" />
+        </Link>
         <div>
           <h1 className="font-heading text-2xl leading-none font-extrabold tracking-wide uppercase sm:text-[30px]">
             İSG-Ç Takip Sistemi
@@ -12,12 +16,7 @@ export function Header({ userName, userEmail }: { userName: string; userEmail: s
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <ThemeSwitcher />
-        <div className="text-right text-xs text-muted-foreground">
-          <div className="font-medium text-foreground">{userName}</div>
-          <div>{userEmail}</div>
-        </div>
-        <LogoutButton />
+        <AccountMenu userName={userName} userEmail={userEmail} />
       </div>
     </header>
   );
