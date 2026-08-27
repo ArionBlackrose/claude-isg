@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MenuIcon, XIcon } from 'lucide-react';
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 export type NavTab = { href: string; label: string };
@@ -34,7 +35,13 @@ export function CollapsibleNav({
 
   const desktopText = size === 'lg' ? 'font-heading text-[17px]' : 'text-sm';
   const mobileText = size === 'lg' ? 'font-heading text-[15px]' : 'text-sm';
-  const drawerId = `${ariaLabel.replace(/\s+/g, '-').toLowerCase()}-drawer`;
+  const slug = ariaLabel.replace(/\s+/g, '-').toLowerCase();
+  const drawerId = `${slug}-drawer`;
+  // Bu sekme çubuğunun kayan alt-çizgi göstergesine özel layoutId — TabsNav
+  // ve AdminSubNav aynı anda (admin sayfalarında) birlikte monte olabildiği
+  // için ortak bir sabit kullanılırsa Motion ikisi arasında göstergeyi
+  // "taşımaya" çalışır; ariaLabel'dan türetilen slug her örneği ayırır.
+  const underlineLayoutId = `${slug}-underline`;
 
   return (
     <nav
@@ -43,18 +50,28 @@ export function CollapsibleNav({
     >
       {/* Masaüstü: yatay sekme çubuğu */}
       <div className="hidden flex-wrap gap-1 md:flex">
-        {tabs.map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={cn(
-              `border-b-[3px] border-transparent px-4 py-2.5 ${desktopText} font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground`,
-              isActive(pathname, tab.href) && 'border-primary text-primary',
-            )}
-          >
-            {tab.label}
-          </Link>
-        ))}
+        {tabs.map((tab) => {
+          const active = isActive(pathname, tab.href);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={cn(
+                `relative border-b-[3px] border-transparent px-4 py-2.5 ${desktopText} font-semibold tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground`,
+                active && 'text-primary',
+              )}
+            >
+              {tab.label}
+              {active && (
+                <motion.span
+                  layoutId={underlineLayoutId}
+                  className="absolute inset-x-0 -bottom-[3px] h-[3px] bg-primary"
+                  transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
+                />
+              )}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Mobil: hamburger + açılır menü */}

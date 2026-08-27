@@ -1,5 +1,6 @@
 'use client';
 
+import { AnimatePresence, motion } from 'motion/react';
 import { Button } from './button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { PAGE_SIZE_OPTIONS } from '@/hooks/use-pagination';
@@ -48,8 +49,19 @@ export function PaginationBar({
         >
           Önceki
         </Button>
-        <span className="text-xs text-muted-foreground">
-          Sayfa {page} / {totalPages}
+        <span className="relative inline-grid text-xs text-muted-foreground">
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={page}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="col-start-1 row-start-1"
+            >
+              Sayfa {page} / {totalPages}
+            </motion.span>
+          </AnimatePresence>
         </span>
         <Button
           type="button"
