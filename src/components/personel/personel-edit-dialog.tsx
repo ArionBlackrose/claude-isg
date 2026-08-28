@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -36,7 +36,7 @@ export function PersonelEditDialog({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<PersonnelInput, unknown, PersonnelOutput>({
@@ -58,7 +58,10 @@ export function PersonelEditDialog({
     },
   });
 
-  const firmaChanged = (watch('firma') || '') !== (personnel.firma ?? '');
+  const firma = useWatch({ control, name: 'firma' });
+  const calismaSekli = useWatch({ control, name: 'calismaSekli' });
+  const durum = useWatch({ control, name: 'durum' });
+  const firmaChanged = (firma || '') !== (personnel.firma ?? '');
   const firmaChangedRef = useRef(firmaChanged);
 
   // Firma değiştirildiğinde İşe Giriş Tarihi'nin eski firmadan kalma
@@ -170,7 +173,7 @@ export function PersonelEditDialog({
             <div className="space-y-1.5">
               <Label htmlFor="edit-calismaSekli">Çalışma Şekli</Label>
               <Select
-                value={watch('calismaSekli')}
+                value={calismaSekli}
                 onValueChange={(v) => setValue('calismaSekli', v ?? DEFAULT_CALISMA_SEKLI)}
               >
                 <SelectTrigger id="edit-calismaSekli" className="w-full">
@@ -188,7 +191,7 @@ export function PersonelEditDialog({
             <div className="space-y-1.5">
               <Label htmlFor="edit-durum">Durum</Label>
               <Select
-                value={watch('durum')}
+                value={durum}
                 onValueChange={(v) => setValue('durum', (v as 'Güncel' | 'Çıkış') ?? 'Güncel')}
               >
                 <SelectTrigger id="edit-durum" className="w-full">

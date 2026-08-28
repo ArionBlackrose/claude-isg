@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -37,12 +37,13 @@ export function PersonelForm() {
     handleSubmit,
     reset,
     setValue,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<PersonnelInput, unknown, PersonnelOutput>({
     resolver: zodResolver(personnelSchema),
     defaultValues: DEFAULTS,
   });
+  const calismaSekli = useWatch({ control, name: 'calismaSekli' });
 
   async function onSubmit(values: PersonnelOutput) {
     const result = await createPersonnel(values);
@@ -106,7 +107,7 @@ export function PersonelForm() {
         <div className="space-y-1.5">
           <Label htmlFor="calismaSekli">Çalışma Şekli</Label>
           <Select
-            value={watch('calismaSekli')}
+            value={calismaSekli}
             onValueChange={(v) => setValue('calismaSekli', v ?? DEFAULT_CALISMA_SEKLI)}
           >
             <SelectTrigger id="calismaSekli" className="w-full">

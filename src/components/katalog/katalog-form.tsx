@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -31,13 +31,15 @@ export function KatalogForm() {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<TrainingInput>({
     resolver: zodResolver(trainingSchema),
     defaultValues: DEFAULTS,
   });
+  const kategori = useWatch({ control, name: 'kategori' });
+  const digerSecenegiVar = useWatch({ control, name: 'digerSecenegiVar' });
 
   async function onSubmit(values: TrainingInput) {
     const result = await createTraining(values);
@@ -63,7 +65,7 @@ export function KatalogForm() {
       <div className="space-y-1.5">
         <Label htmlFor="kategori">Kategori</Label>
         <Select
-          value={watch('kategori')}
+          value={kategori}
           onValueChange={(v) => setValue('kategori', (v as TrainingInput['kategori']) ?? 'Genel')}
         >
           <SelectTrigger id="kategori" className="w-full">
@@ -99,14 +101,14 @@ export function KatalogForm() {
           {...register('egitimSuresi', { valueAsNumber: true })}
         />
       </div>
-      {watch('kategori') === 'Saha Eğitimi' && (
+      {kategori === 'Saha Eğitimi' && (
         <div className="space-y-1.5">
           <Label htmlFor="digerSecenegiVar" className="flex cursor-pointer items-center gap-2">
             <input
               id="digerSecenegiVar"
               type="checkbox"
               className="accent-primary"
-              checked={watch('digerSecenegiVar') ?? false}
+              checked={digerSecenegiVar ?? false}
               onChange={(e) => setValue('digerSecenegiVar', e.target.checked)}
             />
             &quot;Diğer&quot; (serbest metin) seçeneği olsun
