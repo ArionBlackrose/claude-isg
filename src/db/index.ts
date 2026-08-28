@@ -1,9 +1,17 @@
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
+import fs from 'node:fs';
 import path from 'node:path';
 import * as schema from './schema';
 
 const DB_PATH = process.env.DATABASE_URL ?? path.join(process.cwd(), 'data', 'app.db');
+
+// data/ klasörü repoya dahil değil (.gitignore sadece *.db dosyalarını
+// hariç tutar, klasörün kendisini değil) — sıfırdan klonlanan bir
+// ortamda bu klasör hiç yoktur ve better-sqlite3 dizin yoksa senkron
+// olarak throw eder; bu da modül import edilir edilmez tüm sunucu
+// process'ini ayağa kalkmadan çökertir. Açmadan önce garanti altına alıyoruz.
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 const sqlite = new Database(DB_PATH);
 sqlite.pragma('journal_mode = WAL');
